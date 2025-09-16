@@ -1,0 +1,122 @@
+erDiagram
+    %% Core Tables
+    VAULTS ||--o{ USER_POSITIONS : contains
+    VAULTS ||--o{ USER_TRANSACTIONS : tracks
+    VAULTS ||--o{ USER_KPIS : measured_in
+    VAULTS ||--|| INDEXER_STATE : monitored_by
+    VAULTS ||--o{ API_LOGS : logged_in
+    
+    %% User Relations
+    USERS ||--o{ USER_POSITIONS : has
+    USERS ||--o{ USER_TRANSACTIONS : performs
+    USERS ||--o{ USER_KPIS : calculated_for
+    USERS ||--o{ API_LOGS : tracked_in
+
+    %% Table Definitions
+    VAULTS {
+        varchar(50) id PK "Vault identifier"
+        varchar(255) name "Display name"
+        text description "Full description"
+        varchar(50) chain "Network (starknet)"
+        varchar(50) chain_id "Chain ID"
+        varchar(20) symbol "Vault symbol"
+        varchar(20) base_asset "Base currency"
+        varchar(20) status "live/paused/retired"
+        date inception_date "Launch date"
+        varchar(100) contract_address "On-chain address"
+        integer mgmt_fee_bps "Management fee"
+        integer perf_fee_bps "Performance fee"
+        text strategy_brief "Strategy description"
+        varchar(500) docs_url "Documentation URL"
+        decimal min_deposit "Minimum deposit"
+        decimal max_deposit "Maximum deposit"
+        boolean deposit_paused "Deposits enabled"
+        boolean instant_liquidity "Instant withdrawals"
+        integer instant_slippage_max_bps "Max slippage"
+        decimal redeem_24h_threshold_pct_of_aum "24h threshold"
+        boolean redeem_48h_above_threshold "48h window"
+        varchar(500) icon_light_url "Light theme icon"
+        varchar(500) icon_dark_url "Dark theme icon"
+        varchar(500) api_endpoint "Vault API URL"
+        timestamptz created_at "Creation time"
+        timestamptz updated_at "Last update"
+    }
+    
+    USERS {
+        varchar(100) address PK "Wallet address"
+        varchar(50) chain "Network"
+        timestamptz created_at "Creation time"
+        timestamptz updated_at "Last update"
+    }
+    
+    USER_POSITIONS {
+        serial id PK "Position ID"
+        varchar(100) user_address FK "User wallet"
+        varchar(50) vault_id FK "Vault ID"
+        decimal(36_18) share_balance "Current shares"
+        decimal(36_18) cost_basis "Total deposits"
+        timestamptz first_deposit_at "First deposit"
+        timestamptz last_activity_at "Last activity"
+        timestamptz created_at "Creation time"
+        timestamptz updated_at "Last update"
+    }
+    
+    USER_TRANSACTIONS {
+        serial id PK "Transaction ID"
+        varchar(100) tx_hash UK "Blockchain hash"
+        bigint block_number "Block height"
+        timestamptz block_timestamp "Block time"
+        varchar(100) user_address FK "User wallet"
+        varchar(50) vault_id FK "Vault ID"
+        varchar(20) type "deposit/withdraw/fee"
+        varchar(20) status "pending/confirmed/failed"
+        decimal(36_18) amount "Base asset amount"
+        decimal(36_18) shares_amount "Share tokens"
+        decimal(36_18) share_price "Price at time"
+        decimal(36_18) gas_fee "Transaction fee"
+        jsonb metadata "Additional data"
+        timestamptz created_at "Creation time"
+        timestamptz updated_at "Last update"
+    }
+    
+    USER_KPIS {
+        serial id PK "KPI ID"
+        varchar(100) user_address FK "User wallet"
+        varchar(50) vault_id FK "Vault ID"
+        decimal(36_18) all_time_pnl "Total P&L"
+        decimal(36_18) unrealized_pnl "Unrealized P&L"
+        decimal(36_18) realized_pnl "Realized P&L"
+        decimal(5_2) max_drawdown_pct "Max drawdown %"
+        decimal(10_4) sharpe_ratio "Sharpe ratio"
+        decimal(36_18) total_deposits "Total deposited"
+        decimal(36_18) total_withdrawals "Total withdrawn"
+        decimal(36_18) total_fees_paid "Fees paid"
+        timestamptz calculated_at "Calculation time"
+        decimal(36_18) share_price_used "Price for calc"
+        timestamptz created_at "Creation time"
+        timestamptz updated_at "Last update"
+    }
+    
+    INDEXER_STATE {
+        serial id PK "State ID"
+        varchar(50) vault_id FK "Vault ID"
+        bigint last_processed_block "Last block"
+        timestamptz last_processed_timestamp "Last timestamp"
+        text last_error "Error message"
+        timestamptz last_error_at "Error time"
+        varchar(20) status "active/paused/error"
+        timestamptz created_at "Creation time"
+        timestamptz updated_at "Last update"
+    }
+    
+    API_LOGS {
+        bigserial id PK "Log ID"
+        varchar(255) endpoint "API endpoint"
+        varchar(10) method "HTTP method"
+        varchar(100) user_address "User wallet"
+        varchar(50) vault_id "Vault ID"
+        integer response_time_ms "Response time"
+        integer status_code "HTTP status"
+        text error_message "Error if any"
+        timestamptz created_at "Request time"
+    }

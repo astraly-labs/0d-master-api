@@ -13,7 +13,7 @@ services:
       - pragma_network
 
   db:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: pragma_postgres
     restart: always
     environment:
