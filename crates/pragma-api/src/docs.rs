@@ -2,13 +2,34 @@ use anyhow::Result;
 use serde_json::to_string_pretty;
 use std::path::PathBuf;
 use utoipa::OpenApi;
+use utoipa::openapi::{ServerBuilder, ServerVariableBuilder};
+use utoipa::Modify;
 use utoipauto::utoipauto;
+
+pub struct ServerAddon;
+
+impl Modify for ServerAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let server_variable = ServerVariableBuilder::new()
+            .default_value("devnet")
+            .enum_values(Some(vec!["devnet", "production"]))
+            .build();
+        openapi.servers = Some(vec![
+            ServerBuilder::new()
+                .url("https://{environment}.0d.finance/api/v1")
+                .parameter("environment", server_variable)
+                .build(),
+        ]);
+    }
+}
 
 #[utoipauto(paths = "./crates/pragma-api/src/")]
 #[derive(OpenApi)]
 #[openapi(
+    modifiers(&ServerAddon),
     tags(
-        (name = "pragma-bin", description = "pragma, auth service")
+        (name = "pragma-bin", description = "0d, master api"),
+        (name = "Vaults", description = "Vault management endpoints")
     )
 )]
 pub struct ApiDoc;
