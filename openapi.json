@@ -1,0 +1,20 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "pragma-api",
+    "description": "Template to create a new service using axum and diesel.",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {},
+  "components": {},
+  "tags": [
+    {
+      "name": "pragma-bin",
+      "description": "pragma, auth service"
+    }
+  ]
+}

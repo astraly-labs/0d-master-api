@@ -1,4 +1,4 @@
-# 🚀 Pragma Template
+# 🚀 0D Master API
 
 Pragma Template is a template for creating a new service using axum and diesel. It follows modern Rust practices, emphasizing reliability, safety, and maintainability.
 

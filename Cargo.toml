@@ -2,12 +2,12 @@
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.86.0"
-description = "Template to create a new service using axum and diesel."
+description = "0D Master API for vaults"
 homepage = "https://pragma.build"
 readme = "./README.md"
 exclude = [".github/"]
 license = "MIT"
-repository = "https://github.com/astraly-labs/pragma-axum-diesel-template"
+repository = "https://github.com/astraly-labs/0d-master-api"
 
 [workspace]
 members = [
@@ -68,7 +68,12 @@ pragma-api = { path = "crates/pragma-api", default-features = false }
 pragma-db = { path = "crates/pragma-db", default-features = false }
 
 # Pragma crates
-pragma-common = { version = "0.1.14", features = ["telemetry", "serde", "utoipa"] }
+pragma-common = { version = "0.4.1", features = [
+    "telemetry",
+    "serde",
+    "utoipa",
+    "services",
+] }
 
 async-trait = "0.1"
 anyhow = "1"

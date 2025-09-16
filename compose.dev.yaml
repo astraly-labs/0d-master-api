@@ -1,33 +1,43 @@
 services:
   lgtm:
-      image: grafana/otel-lgtm
-      ports:
-        # Grafana
-        - "3000:3000"
-        # OpenTelemetry ports (OTLP/gRPC and OTLP/HTTP)
-        - "4317:4317"
-        - "4318:4318"
-      volumes:
-        # Optional: persist data across container restarts
-        - lgtm_data:/data
-      environment:
-      # Optional: enable logging for troubleshooting
-        - ENABLE_LOGS_ALL=true
+    image: grafana/otel-lgtm
+    ports:
+      - "3000:3000"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - lgtm_data:/data
+    environment:
+      - ENABLE_LOGS_ALL=true
+    networks:
+      - pragma_network
+
   db:
-    image: postgres17
+    image: postgres:17
     container_name: pragma_postgres
     restart: always
     environment:
       POSTGRES_USER: pragma_user
       POSTGRES_PASSWORD: pragma_password
       POSTGRES_DB: pragma
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
       PGPORT: 5432
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    command: postgres -c shared_preload_libraries=timescaledb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pragma_user -d pragma"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pragma_network
 
 volumes:
   postgres_data:
   lgtm_data:
+
+networks:
+  pragma_network:
+    driver: bridge

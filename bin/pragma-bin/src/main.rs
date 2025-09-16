@@ -20,8 +20,8 @@ async fn main() -> Result<()> {
         api_port,
     } = AuthCli::parse();
 
-    let app_name = "pragma_auth".to_string();
-    if let Err(e) = init_telemetry(app_name.clone(), otel_collector_endpoint) {
+    let app_name = "0d_master_api";
+    if let Err(e) = init_telemetry(app_name, otel_collector_endpoint) {
         panic!("Could not init telemetry: {e}");
     }
 
