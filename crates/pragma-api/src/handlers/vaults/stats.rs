@@ -43,11 +43,10 @@ pub async fn get_vault_stats(
             tracing::error!("Database interaction error: {}", e);
             ApiError::InternalServerError
         })?
-        .map_err(|e| match e {
-            diesel::result::Error::NotFound => {
-                ApiError::NotFound(format!("Vault {} not found", vault_id))
-            }
-            _ => {
+        .map_err(|e| {
+            if e == diesel::result::Error::NotFound {
+                ApiError::NotFound(format!("Vault {vault_id} not found"))
+            } else {
                 tracing::error!("Failed to fetch vault: {}", e);
                 ApiError::InternalServerError
             }
@@ -55,12 +54,13 @@ pub async fn get_vault_stats(
 
     // Call the vault's stats endpoint via helper
     let client = http_client()?;
-    let stats = fetch_vault_stats(&client, &vault.api_endpoint).await;
-    let tvl = stats
+    let fetched_stats = fetch_vault_stats(&client, &vault.api_endpoint).await;
+    let tvl = fetched_stats
         .as_ref()
-        .map(|s| s.tvl.clone())
-        .unwrap_or_else(|| "0".to_string());
-    let apr = stats.and_then(|s| s.past_month_apr_pct).unwrap_or(0.0);
+        .map_or_else(|| "0".to_string(), |s| s.tvl.clone());
+    let apr = fetched_stats
+        .and_then(|s| s.past_month_apr_pct)
+        .unwrap_or(0.0);
 
     Ok(Json(VaultStats {
         tvl,

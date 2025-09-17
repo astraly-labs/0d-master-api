@@ -25,7 +25,7 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
     })?;
 
     let vaults = conn
-        .interact(move |conn| Vault::find_all(conn))
+        .interact(Vault::find_all)
         .await
         .map_err(|e| {
             tracing::error!("Database interaction error: {}", e);
@@ -41,17 +41,16 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
     let client = http_client()?;
 
     let mut items = Vec::with_capacity(vaults.len());
-    for vault in vaults.into_iter() {
+    for vault in vaults {
         let stats_url = format!("{}/stats", vault.api_endpoint.trim_end_matches('/'));
 
-        let tvl = match fetch_vault_stats(&client, &vault.api_endpoint).await {
-            Some(stats) => stats.tvl,
-            None => {
+        let tvl = fetch_vault_stats(&client, &vault.api_endpoint)
+            .await
+            .map_or_else(|| {
                 let code: Option<HttpStatusCode> = None;
                 tracing::warn!(vault_id = %vault.id, url = %stats_url, status = ?code, "Failed to fetch vault stats");
                 "0".to_string()
-            }
-        };
+            }, |vault_stats| vault_stats.tvl);
 
         // Map DB status to API spec values: active -> live
         let status = map_status(&vault.status);
