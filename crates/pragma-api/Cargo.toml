@@ -38,3 +38,4 @@ utoipauto.workspace = true
 
 axum-tracing-opentelemetry.workspace = true
 reqwest.workspace = true
+tower_governor.workspace = true

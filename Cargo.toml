@@ -94,6 +94,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.4", features = ["fast-rng", "v4", "serde"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tower_governor = { version = "0.8.0", features = ["axum", "tracing"] }
 
 # OpenAPI
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
