@@ -1,7 +1,7 @@
-use chrono::{NaiveDate, DateTime, Utc};
+use bigdecimal::BigDecimal;
+use chrono::{DateTime, NaiveDate, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use bigdecimal::BigDecimal;
 
 use crate::schema::vaults;
 
@@ -47,14 +47,10 @@ impl Vault {
     }
 
     pub fn find_by_chain(chain: &str, conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
-        vaults::table
-            .filter(vaults::chain.eq(chain))
-            .load(conn)
+        vaults::table.filter(vaults::chain.eq(chain)).load(conn)
     }
 
     pub fn find_active(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
-        vaults::table
-            .filter(vaults::status.eq("active"))
-            .load(conn)
+        vaults::table.filter(vaults::status.eq("active")).load(conn)
     }
 }

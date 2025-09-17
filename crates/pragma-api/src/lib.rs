@@ -2,6 +2,7 @@ pub mod docs;
 pub mod dto;
 pub mod errors;
 pub mod handlers;
+pub mod helpers;
 pub mod router;
 
 use std::net::SocketAddr;

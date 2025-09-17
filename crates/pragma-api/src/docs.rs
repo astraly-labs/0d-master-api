@@ -1,9 +1,9 @@
 use anyhow::Result;
 use serde_json::to_string_pretty;
 use std::path::PathBuf;
+use utoipa::Modify;
 use utoipa::OpenApi;
 use utoipa::openapi::{ServerBuilder, ServerVariableBuilder};
-use utoipa::Modify;
 use utoipauto::utoipauto;
 
 pub struct ServerAddon;

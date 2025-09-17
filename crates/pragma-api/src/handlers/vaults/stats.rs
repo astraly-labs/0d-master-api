@@ -4,27 +4,32 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::helpers::{fetch_vault_share_price, fetch_vault_stats, http_client, map_status};
-use crate::{AppState, dto::Vault as VaultDto, errors::ApiError};
+use crate::{
+    AppState,
+    dto::VaultStats,
+    errors::ApiError,
+    helpers::{fetch_vault_stats, http_client},
+};
 use pragma_db::models::Vault;
 
 #[utoipa::path(
     get,
-    path = "/vaults/{vault_id}",
+    path = "/vaults/{vault_id}/stats",
     tag = "Vaults",
     params(
         ("vault_id" = String, Path, description = "Vault identifier")
     ),
     responses(
-        (status = 200, description = "Vault metadata with live values", body = VaultDto),
+        (status = 200, description = "Vault statistics", body = VaultStats),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
     )
 )]
-pub async fn get_vault(
+pub async fn get_vault_stats(
     State(state): State<AppState>,
     Path(vault_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
+    // Find the vault to get its API endpoint
     let conn = state.pool.get().await.map_err(|e| {
         tracing::error!("Failed to get database connection: {}", e);
         ApiError::InternalServerError
@@ -48,24 +53,17 @@ pub async fn get_vault(
             }
         })?;
 
-    // Fetch non-metadata (tvl & share_price) from the vault's API endpoint.
+    // Call the vault's stats endpoint via helper
     let client = http_client()?;
-
-    let tvl = fetch_vault_stats(&client, &vault.api_endpoint)
-        .await
-        .map(|s| s.tvl)
+    let stats = fetch_vault_stats(&client, &vault.api_endpoint).await;
+    let tvl = stats
+        .as_ref()
+        .map(|s| s.tvl.clone())
         .unwrap_or_else(|| "0".to_string());
+    let apr = stats.and_then(|s| s.past_month_apr_pct).unwrap_or(0.0);
 
-    let share_price = fetch_vault_share_price(&client, &vault.api_endpoint)
-        .await
-        .unwrap_or_else(|| "0".to_string());
-
-    // Build response DTO and embed live values.
-    let mut dto = VaultDto::from(vault);
-    // Map status to spec: active -> live
-    dto.status = map_status(&dto.status);
-    dto.tvl = tvl;
-    dto.share_price = share_price;
-
-    Ok(Json(dto))
+    Ok(Json(VaultStats {
+        tvl,
+        past_month_apr_pct: apr,
+    }))
 }

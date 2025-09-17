@@ -1,24 +1,20 @@
-use axum::{
-    extract::State,
-    response::IntoResponse,
-    Json,
-};
+use axum::{Json, extract::State, response::IntoResponse};
 
 use crate::{
-    dto::{ApiResponse, VaultListItem, VaultListResponse, VaultStats},
-    errors::ApiError,
     AppState,
+    dto::{VaultListItem, VaultListResponse},
+    errors::ApiError,
+    helpers::{fetch_vault_stats, http_client, map_status},
 };
 use pragma_db::models::Vault;
 use reqwest::StatusCode as HttpStatusCode;
-use std::time::Duration;
 
 #[utoipa::path(
     get,
     path = "/vaults",
     tag = "Vaults",
     responses(
-        (status = 200, description = "Vault list", body = ApiResponse<VaultListResponse>),
+        (status = 200, description = "Vault list", body = VaultListResponse),
         (status = 500, description = "Internal server error")
     )
 )]
@@ -42,60 +38,23 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
 
     // For non-metadata fields (e.g., TVL), query each vault's API endpoint.
     // Keep this resilient: on any failure, default TVL to "0" and continue.
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(2))
-        .build()
-        .map_err(|e| {
-            tracing::error!("Failed to build HTTP client: {}", e);
-            ApiError::InternalServerError
-        })?;
+    let client = http_client()?;
 
     let mut items = Vec::with_capacity(vaults.len());
     for vault in vaults.into_iter() {
-        let stats_url = format!(
-            "{}/stats",
-            vault.api_endpoint.trim_end_matches('/')
-        );
+        let stats_url = format!("{}/stats", vault.api_endpoint.trim_end_matches('/'));
 
-        let tvl = match client.get(&stats_url).send().await {
-            Ok(resp) => {
-                // Treat non-2xx as failure
-                if !resp.status().is_success() {
-                    tracing::warn!(
-                        vault_id = %vault.id,
-                        status = %resp.status().as_u16(),
-                        url = %stats_url,
-                        "Vault stats request returned non-success status"
-                    );
-                    "0".to_string()
-                } else {
-                    match resp.json::<VaultStats>().await {
-                        Ok(stats) => stats.tvl,
-                        Err(e) => {
-                            tracing::warn!(
-                                vault_id = %vault.id,
-                                error = %e,
-                                url = %stats_url,
-                                "Failed to parse vault stats JSON"
-                            );
-                            "0".to_string()
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                // Network/timeout error; log and fallback
-                let code: Option<HttpStatusCode> = e.status();
-                tracing::warn!(
-                    vault_id = %vault.id,
-                    url = %stats_url,
-                    status = ?code.map(|c| c.as_u16()),
-                    error = %e,
-                    "Failed to fetch vault stats"
-                );
+        let tvl = match fetch_vault_stats(&client, &vault.api_endpoint).await {
+            Some(stats) => stats.tvl,
+            None => {
+                let code: Option<HttpStatusCode> = None;
+                tracing::warn!(vault_id = %vault.id, url = %stats_url, status = ?code, "Failed to fetch vault stats");
                 "0".to_string()
             }
         };
+
+        // Map DB status to API spec values: active -> live
+        let status = map_status(&vault.status);
 
         items.push(VaultListItem {
             id: vault.id,
@@ -104,9 +63,9 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
             chain: vault.chain,
             symbol: vault.symbol,
             tvl,
-            status: vault.status,
+            status,
         });
     }
 
-    Ok(Json(ApiResponse::ok(VaultListResponse { items })))
+    Ok(Json(VaultListResponse { items }))
 }

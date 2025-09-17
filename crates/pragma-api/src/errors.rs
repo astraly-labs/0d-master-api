@@ -1,7 +1,7 @@
+use crate::dto::ApiResponse;
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use crate::dto::ApiResponse;
 
 #[derive(Error, Debug, Serialize, Deserialize)]
 pub enum ApiError {
@@ -24,7 +24,10 @@ impl IntoResponse for ApiError {
             Self::DbError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
             Self::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, msg),
             Self::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            Self::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()),
+            Self::InternalServerError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
         };
         let response: ApiResponse<()> = ApiResponse::error(msg);
         (status, Json(response)).into_response()
