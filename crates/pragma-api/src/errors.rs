@@ -1,3 +1,4 @@
+use crate::dto::ApiResponse;
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -10,15 +11,25 @@ pub enum ApiError {
     NotImplemented(String),
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
+    #[error("Not found: {0}")]
+    NotFound(String),
+    #[error("Internal server error")]
+    InternalServerError,
 }
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
-        let status = match self {
-            Self::Unauthorized(_) => StatusCode::UNAUTHORIZED,
-            Self::DbError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::NotImplemented(_) => StatusCode::NOT_IMPLEMENTED,
+        let (status, msg) = match self {
+            Self::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
+            Self::DbError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            Self::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, msg),
+            Self::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            Self::InternalServerError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
         };
-        (status, Json(self)).into_response()
+        let response: ApiResponse<()> = ApiResponse::error(msg);
+        (status, Json(response)).into_response()
     }
 }
