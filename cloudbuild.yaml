@@ -8,6 +8,7 @@ steps:
       [
         "build",
         "--tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/0d-master-api:latest",
+        '--tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/0d-master-api:$SHORT_SHA',
         "--file=Dockerfile",
         ".",
       ]
