@@ -1,0 +1,26 @@
+timeout: 3600s
+
+# Get API URL from Secret Manager
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    id: docker-build-0d-master-api
+    args:
+      [
+        "build",
+        "--tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/0d-master-api:latest",
+        '--tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/0d-master-api:$SHORT_SHA',
+        "--file=Dockerfile",
+        ".",
+      ]
+  - name: "gcr.io/cloud-builders/docker"
+    id: docker-push-0d-master-api
+    args:
+      [
+        "push",
+        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/0d-master-api:latest",
+      ]
+    waitFor: ["docker-build-0d-master-api"]
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: "E2_HIGHCPU_8"

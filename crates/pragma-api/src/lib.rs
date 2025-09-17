@@ -102,7 +102,7 @@ impl Service for ApiService {
                                     tracing::info!("rate limiting storage size: {}", governor_limiter.len());
                                     governor_limiter.retain_recent();
                                 }
-                                _ = cancel_token.cancelled() => {
+                                () = cancel_token.cancelled() => {
                                     tracing::debug!("rate limiter cleanup task shutting down");
                                     break;
                                 }

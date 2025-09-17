@@ -76,7 +76,7 @@ pub struct VaultStats {
 
 impl From<pragma_db::models::Vault> for Vault {
     fn from(vault: pragma_db::models::Vault) -> Self {
-        Vault {
+        Self {
             id: vault.id,
             name: vault.name,
             description: vault.description,

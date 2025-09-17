@@ -38,11 +38,10 @@ pub async fn get_vault(
             tracing::error!("Database interaction error: {}", e);
             ApiError::InternalServerError
         })?
-        .map_err(|e| match e {
-            diesel::result::Error::NotFound => {
-                ApiError::NotFound(format!("Vault {} not found", vault_id))
-            }
-            _ => {
+        .map_err(|e| {
+            if e == diesel::result::Error::NotFound {
+                ApiError::NotFound(format!("Vault {vault_id} not found"))
+            } else {
                 tracing::error!("Failed to fetch vault: {}", e);
                 ApiError::InternalServerError
             }
@@ -53,8 +52,7 @@ pub async fn get_vault(
 
     let tvl = fetch_vault_stats(&client, &vault.api_endpoint)
         .await
-        .map(|s| s.tvl)
-        .unwrap_or_else(|| "0".to_string());
+        .map_or_else(|| "0".to_string(), |s| s.tvl);
 
     let share_price = fetch_vault_share_price(&client, &vault.api_endpoint)
         .await
