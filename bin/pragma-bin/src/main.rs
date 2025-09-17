@@ -4,11 +4,12 @@ use crate::cli::AuthCli;
 use anyhow::Result;
 use clap::Parser;
 use dotenvy::dotenv;
-use pragma_common::telemetry::init_telemetry;
+use pragma_common::{services::ServiceGroup, telemetry::init_telemetry};
 
 use pragma_api::{ApiService, AppState};
 use pragma_common::services::Service;
 use pragma_db::{init_pool, run_migrations};
+use pragma_indexer::task::IndexerTask;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,10 +29,17 @@ async fn main() -> Result<()> {
     let pool = init_pool(&app_name, &database_url)?;
     run_migrations(&pool).await;
 
-    let app_state = AppState { pool };
+    let app_state = AppState { pool: pool.clone() };
 
     let api_service = ApiService::new(app_state, "0.0.0.0", api_port);
-    api_service.start_and_drive_to_end().await?;
+
+    let indexer_service = IndexerTask::new(pool.clone());
+
+    ServiceGroup::default()
+        .with(api_service)
+        .with(indexer_service)
+        .start_and_drive_to_end()
+        .await?;
 
     Ok(())
 }

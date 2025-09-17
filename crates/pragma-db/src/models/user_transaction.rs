@@ -1,0 +1,317 @@
+use bigdecimal::BigDecimal;
+use chrono::{DateTime, Utc};
+use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
+
+use crate::schema::user_transactions;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = user_transactions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct UserTransaction {
+    pub id: i32,
+    pub tx_hash: String,
+    pub block_number: i64,
+    pub block_timestamp: DateTime<Utc>,
+    pub user_address: String,
+    pub vault_id: String,
+    pub type_: String,
+    pub status: String,
+    pub amount: BigDecimal,
+    pub shares_amount: Option<BigDecimal>,
+    pub share_price: Option<BigDecimal>,
+    pub gas_fee: Option<BigDecimal>,
+    pub metadata: Option<JsonValue>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Insertable)]
+#[diesel(table_name = user_transactions)]
+pub struct NewUserTransaction {
+    pub tx_hash: String,
+    pub block_number: i64,
+    pub block_timestamp: DateTime<Utc>,
+    pub user_address: String,
+    pub vault_id: String,
+    pub type_: String,
+    pub status: String,
+    pub amount: BigDecimal,
+    pub shares_amount: Option<BigDecimal>,
+    pub share_price: Option<BigDecimal>,
+    pub gas_fee: Option<BigDecimal>,
+    pub metadata: Option<JsonValue>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, AsChangeset)]
+#[diesel(table_name = user_transactions)]
+pub struct UserTransactionUpdate {
+    pub status: Option<String>,
+    pub shares_amount: Option<BigDecimal>,
+    pub share_price: Option<BigDecimal>,
+    pub gas_fee: Option<BigDecimal>,
+    pub metadata: Option<JsonValue>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+// Transaction types enum for better type safety
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TransactionType {
+    Deposit,
+    Withdraw,
+    Transfer,
+    Claim,
+}
+
+impl TransactionType {
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Deposit => "deposit",
+            Self::Withdraw => "withdraw",
+            Self::Transfer => "transfer",
+            Self::Claim => "claim",
+        }
+    }
+}
+
+// Transaction status enum for better type safety
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TransactionStatus {
+    Pending,
+    Confirmed,
+    Failed,
+    Cancelled,
+}
+
+impl TransactionStatus {
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Confirmed => "confirmed",
+            Self::Failed => "failed",
+            Self::Cancelled => "cancelled",
+        }
+    }
+}
+
+impl UserTransaction {
+    /// Find a transaction by ID
+    pub fn find_by_id(id: i32, conn: &mut diesel::PgConnection) -> QueryResult<Self> {
+        user_transactions::table.find(id).first(conn)
+    }
+
+    /// Find a transaction by hash
+    pub fn find_by_hash(tx_hash: &str, conn: &mut diesel::PgConnection) -> QueryResult<Self> {
+        user_transactions::table
+            .filter(user_transactions::tx_hash.eq(tx_hash))
+            .first(conn)
+    }
+
+    /// Find all transactions for a user
+    pub fn find_by_user(
+        user_address: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<Self>> {
+        user_transactions::table
+            .filter(user_transactions::user_address.eq(user_address))
+            .order(user_transactions::block_timestamp.desc())
+            .load(conn)
+    }
+
+    /// Find all transactions for a vault
+    pub fn find_by_vault(
+        vault_id: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<Self>> {
+        user_transactions::table
+            .filter(user_transactions::vault_id.eq(vault_id))
+            .order(user_transactions::block_timestamp.desc())
+            .load(conn)
+    }
+
+    /// Find transactions for a user in a specific vault
+    pub fn find_by_user_and_vault(
+        user_address: &str,
+        vault_id: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<Self>> {
+        user_transactions::table
+            .filter(user_transactions::user_address.eq(user_address))
+            .filter(user_transactions::vault_id.eq(vault_id))
+            .order(user_transactions::block_timestamp.desc())
+            .load(conn)
+    }
+
+    /// Find transactions by type
+    pub fn find_by_type(
+        transaction_type: TransactionType,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<Self>> {
+        user_transactions::table
+            .filter(user_transactions::type_.eq(transaction_type.as_str()))
+            .order(user_transactions::block_timestamp.desc())
+            .load(conn)
+    }
+
+    /// Find transactions by status
+    pub fn find_by_status(
+        status: TransactionStatus,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<Self>> {
+        user_transactions::table
+            .filter(user_transactions::status.eq(status.as_str()))
+            .order(user_transactions::block_timestamp.desc())
+            .load(conn)
+    }
+
+    /// Find pending transactions
+    pub fn find_pending(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
+        Self::find_by_status(TransactionStatus::Pending, conn)
+    }
+
+    /// Find confirmed transactions
+    pub fn find_confirmed(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
+        Self::find_by_status(TransactionStatus::Confirmed, conn)
+    }
+
+    /// Find failed transactions
+    pub fn find_failed(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
+        Self::find_by_status(TransactionStatus::Failed, conn)
+    }
+
+    /// Find transactions in a block range
+    pub fn find_by_block_range(
+        start_block: i64,
+        end_block: i64,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<Self>> {
+        user_transactions::table
+            .filter(user_transactions::block_number.ge(start_block))
+            .filter(user_transactions::block_number.le(end_block))
+            .order(user_transactions::block_number.asc())
+            .load(conn)
+    }
+
+    /// Find recent transactions (last N transactions)
+    pub fn find_recent(limit: i64, conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
+        user_transactions::table
+            .order(user_transactions::block_timestamp.desc())
+            .limit(limit)
+            .load(conn)
+    }
+
+    /// Create a new transaction
+    pub fn create(
+        new_transaction: &NewUserTransaction,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Self> {
+        diesel::insert_into(user_transactions::table)
+            .values(new_transaction)
+            .get_result(conn)
+    }
+
+    /// Update a transaction
+    pub fn update(
+        &self,
+        updates: &UserTransactionUpdate,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Self> {
+        diesel::update(user_transactions::table.find(self.id))
+            .set(updates)
+            .get_result(conn)
+    }
+
+    /// Update transaction status
+    pub fn update_status(
+        &self,
+        status: TransactionStatus,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Self> {
+        let updates = UserTransactionUpdate {
+            status: Some(status.as_str().to_string()),
+            shares_amount: None,
+            share_price: None,
+            gas_fee: None,
+            metadata: None,
+            updated_at: Some(Utc::now()),
+        };
+        self.update(&updates, conn)
+    }
+
+    /// Delete a transaction
+    pub fn delete(id: i32, conn: &mut diesel::PgConnection) -> QueryResult<usize> {
+        diesel::delete(user_transactions::table.find(id)).execute(conn)
+    }
+
+    /// Count total transactions
+    pub fn count(conn: &mut diesel::PgConnection) -> QueryResult<i64> {
+        user_transactions::table.count().get_result(conn)
+    }
+
+    /// Count transactions by user
+    pub fn count_by_user(user_address: &str, conn: &mut diesel::PgConnection) -> QueryResult<i64> {
+        user_transactions::table
+            .filter(user_transactions::user_address.eq(user_address))
+            .count()
+            .get_result(conn)
+    }
+
+    /// Count transactions by vault
+    pub fn count_by_vault(vault_id: &str, conn: &mut diesel::PgConnection) -> QueryResult<i64> {
+        user_transactions::table
+            .filter(user_transactions::vault_id.eq(vault_id))
+            .count()
+            .get_result(conn)
+    }
+
+    /// Count transactions by type
+    pub fn count_by_type(
+        transaction_type: TransactionType,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<i64> {
+        user_transactions::table
+            .filter(user_transactions::type_.eq(transaction_type.as_str()))
+            .count()
+            .get_result(conn)
+    }
+
+    /// Count transactions by status
+    pub fn count_by_status(
+        status: TransactionStatus,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<i64> {
+        user_transactions::table
+            .filter(user_transactions::status.eq(status.as_str()))
+            .count()
+            .get_result(conn)
+    }
+
+    /// Calculate total volume for a vault
+    pub fn total_volume_by_vault(
+        vault_id: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Option<BigDecimal>> {
+        use diesel::dsl::sum;
+
+        user_transactions::table
+            .filter(user_transactions::vault_id.eq(vault_id))
+            .filter(user_transactions::status.eq(TransactionStatus::Confirmed.as_str()))
+            .select(sum(user_transactions::amount))
+            .first(conn)
+    }
+
+    /// Calculate total volume for a user
+    pub fn total_volume_by_user(
+        user_address: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Option<BigDecimal>> {
+        use diesel::dsl::sum;
+
+        user_transactions::table
+            .filter(user_transactions::user_address.eq(user_address))
+            .filter(user_transactions::status.eq(TransactionStatus::Confirmed.as_str()))
+            .select(sum(user_transactions::amount))
+            .first(conn)
+    }
+}

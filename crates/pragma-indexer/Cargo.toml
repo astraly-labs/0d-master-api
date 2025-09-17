@@ -1,5 +1,5 @@
 [package]
-name = "pragma-db"
+name = "pragma-indexer"
 version.workspace = true
 edition.workspace = true
 description.workspace = true
@@ -14,16 +14,16 @@ exclude.workspace = true
 workspace = true
 
 [dependencies]
+pragma-common.workspace = true
+pragma-db.workspace = true
+
+evian.workspace = true
 anyhow.workspace = true
+async-trait.workspace = true
 chrono.workspace = true
-clap.workspace = true
 deadpool-diesel.workspace = true
-diesel_migrations.workspace = true
 diesel.workspace = true
-dotenvy.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-thiserror.workspace = true
+starknet.workspace = true
+task-supervisor.workspace = true
 tokio.workspace = true
 tracing.workspace = true
-bigdecimal.workspace = true
