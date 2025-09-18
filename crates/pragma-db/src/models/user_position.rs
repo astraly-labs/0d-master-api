@@ -1,6 +1,6 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::user_positions;
@@ -12,8 +12,8 @@ pub struct UserPosition {
     pub id: i32,
     pub user_address: String,
     pub vault_id: String,
-    pub share_balance: BigDecimal,
-    pub cost_basis: BigDecimal,
+    pub share_balance: Decimal,
+    pub cost_basis: Decimal,
     pub first_deposit_at: Option<DateTime<Utc>>,
     pub last_activity_at: Option<DateTime<Utc>>,
     pub created_at: Option<DateTime<Utc>>,
@@ -25,8 +25,8 @@ pub struct UserPosition {
 pub struct NewUserPosition {
     pub user_address: String,
     pub vault_id: String,
-    pub share_balance: BigDecimal,
-    pub cost_basis: BigDecimal,
+    pub share_balance: Decimal,
+    pub cost_basis: Decimal,
     pub first_deposit_at: Option<DateTime<Utc>>,
     pub last_activity_at: Option<DateTime<Utc>>,
 }
@@ -34,8 +34,8 @@ pub struct NewUserPosition {
 #[derive(Debug, Clone, Serialize, Deserialize, AsChangeset)]
 #[diesel(table_name = user_positions)]
 pub struct UserPositionUpdate {
-    pub share_balance: Option<BigDecimal>,
-    pub cost_basis: Option<BigDecimal>,
+    pub share_balance: Option<Decimal>,
+    pub cost_basis: Option<Decimal>,
     pub last_activity_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -81,7 +81,7 @@ impl UserPosition {
     /// Find all active positions (`share_balance` > 0)
     pub fn find_active(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
         user_positions::table
-            .filter(user_positions::share_balance.gt(BigDecimal::from(0)))
+            .filter(user_positions::share_balance.gt(Decimal::from(0)))
             .load(conn)
     }
 
@@ -92,7 +92,7 @@ impl UserPosition {
     ) -> QueryResult<Vec<Self>> {
         user_positions::table
             .filter(user_positions::user_address.eq(user_address))
-            .filter(user_positions::share_balance.gt(BigDecimal::from(0)))
+            .filter(user_positions::share_balance.gt(Decimal::from(0)))
             .load(conn)
     }
 
@@ -103,7 +103,7 @@ impl UserPosition {
     ) -> QueryResult<Vec<Self>> {
         user_positions::table
             .filter(user_positions::vault_id.eq(vault_id))
-            .filter(user_positions::share_balance.gt(BigDecimal::from(0)))
+            .filter(user_positions::share_balance.gt(Decimal::from(0)))
             .load(conn)
     }
 
@@ -141,7 +141,7 @@ impl UserPosition {
     /// Count active positions
     pub fn count_active(conn: &mut diesel::PgConnection) -> QueryResult<i64> {
         user_positions::table
-            .filter(user_positions::share_balance.gt(BigDecimal::from(0)))
+            .filter(user_positions::share_balance.gt(Decimal::from(0)))
             .count()
             .get_result(conn)
     }
@@ -161,7 +161,7 @@ impl UserPosition {
     ) -> QueryResult<i64> {
         user_positions::table
             .filter(user_positions::vault_id.eq(vault_id))
-            .filter(user_positions::share_balance.gt(BigDecimal::from(0)))
+            .filter(user_positions::share_balance.gt(Decimal::from(0)))
             .count()
             .get_result(conn)
     }

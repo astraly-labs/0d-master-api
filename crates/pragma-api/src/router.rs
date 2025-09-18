@@ -16,9 +16,22 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
         .route("/{vault_id}", get(handlers::get_vault))
         .route("/{vault_id}/stats", get(handlers::get_vault_stats));
 
+    // Group user-related endpoints under a dedicated "/users" router
+    let users_router = Router::new()
+        .route("/{address}", get(handlers::get_user_profile))
+        .route(
+            "/{address}/vaults/{vault_id}/summary",
+            get(handlers::get_user_position_summary),
+        )
+        .route(
+            "/{address}/vaults/{vault_id}/transactions",
+            get(handlers::get_user_transaction_history),
+        );
+
     Router::new()
         .route("/health", get(health))
         .nest("/vaults", vaults_router)
+        .nest("/users", users_router)
         .merge(SwaggerUi::new("/v1/docs").url("/v1/docs/openapi.json", open_api))
         .fallback(handler_404)
 }

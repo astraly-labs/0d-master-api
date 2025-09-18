@@ -1,7 +1,10 @@
-use crate::schema::users;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+
+use pragma_common::web3::Chain;
+
+use crate::schema::users;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = users)]
@@ -42,7 +45,7 @@ impl User {
 
     pub fn find_or_create(
         address: &str,
-        chain: &str,
+        chain: Chain,
         conn: &mut diesel::PgConnection,
     ) -> QueryResult<Self> {
         match Self::find_by_address(address, conn) {

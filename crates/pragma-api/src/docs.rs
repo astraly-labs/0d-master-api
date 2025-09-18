@@ -29,7 +29,8 @@ impl Modify for ServerAddon {
     modifiers(&ServerAddon),
     tags(
         (name = "pragma-bin", description = "0d, master api"),
-        (name = "Vaults", description = "Vault management endpoints")
+        (name = "Vaults", description = "Vault management endpoints"),
+        (name = "User", description = "User profile endpoints"),
     )
 )]
 pub struct ApiDoc;

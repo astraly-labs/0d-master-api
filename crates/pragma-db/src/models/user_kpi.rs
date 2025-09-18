@@ -1,6 +1,6 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::user_kpis;
@@ -12,16 +12,16 @@ pub struct UserKpi {
     pub id: i32,
     pub user_address: String,
     pub vault_id: String,
-    pub all_time_pnl: Option<BigDecimal>,
-    pub unrealized_pnl: Option<BigDecimal>,
-    pub realized_pnl: Option<BigDecimal>,
-    pub max_drawdown_pct: Option<BigDecimal>,
-    pub sharpe_ratio: Option<BigDecimal>,
-    pub total_deposits: Option<BigDecimal>,
-    pub total_withdrawals: Option<BigDecimal>,
-    pub total_fees_paid: Option<BigDecimal>,
+    pub all_time_pnl: Option<Decimal>,
+    pub unrealized_pnl: Option<Decimal>,
+    pub realized_pnl: Option<Decimal>,
+    pub max_drawdown_pct: Option<Decimal>,
+    pub sharpe_ratio: Option<Decimal>,
+    pub total_deposits: Option<Decimal>,
+    pub total_withdrawals: Option<Decimal>,
+    pub total_fees_paid: Option<Decimal>,
     pub calculated_at: Option<DateTime<Utc>>,
-    pub share_price_used: Option<BigDecimal>,
+    pub share_price_used: Option<Decimal>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -31,31 +31,31 @@ pub struct UserKpi {
 pub struct NewUserKpi {
     pub user_address: String,
     pub vault_id: String,
-    pub all_time_pnl: Option<BigDecimal>,
-    pub unrealized_pnl: Option<BigDecimal>,
-    pub realized_pnl: Option<BigDecimal>,
-    pub max_drawdown_pct: Option<BigDecimal>,
-    pub sharpe_ratio: Option<BigDecimal>,
-    pub total_deposits: Option<BigDecimal>,
-    pub total_withdrawals: Option<BigDecimal>,
-    pub total_fees_paid: Option<BigDecimal>,
+    pub all_time_pnl: Option<Decimal>,
+    pub unrealized_pnl: Option<Decimal>,
+    pub realized_pnl: Option<Decimal>,
+    pub max_drawdown_pct: Option<Decimal>,
+    pub sharpe_ratio: Option<Decimal>,
+    pub total_deposits: Option<Decimal>,
+    pub total_withdrawals: Option<Decimal>,
+    pub total_fees_paid: Option<Decimal>,
     pub calculated_at: Option<DateTime<Utc>>,
-    pub share_price_used: Option<BigDecimal>,
+    pub share_price_used: Option<Decimal>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, AsChangeset)]
 #[diesel(table_name = user_kpis)]
 pub struct UserKpiUpdate {
-    pub all_time_pnl: Option<BigDecimal>,
-    pub unrealized_pnl: Option<BigDecimal>,
-    pub realized_pnl: Option<BigDecimal>,
-    pub max_drawdown_pct: Option<BigDecimal>,
-    pub sharpe_ratio: Option<BigDecimal>,
-    pub total_deposits: Option<BigDecimal>,
-    pub total_withdrawals: Option<BigDecimal>,
-    pub total_fees_paid: Option<BigDecimal>,
+    pub all_time_pnl: Option<Decimal>,
+    pub unrealized_pnl: Option<Decimal>,
+    pub realized_pnl: Option<Decimal>,
+    pub max_drawdown_pct: Option<Decimal>,
+    pub sharpe_ratio: Option<Decimal>,
+    pub total_deposits: Option<Decimal>,
+    pub total_withdrawals: Option<Decimal>,
+    pub total_fees_paid: Option<Decimal>,
     pub calculated_at: Option<DateTime<Utc>>,
-    pub share_price_used: Option<BigDecimal>,
+    pub share_price_used: Option<Decimal>,
     pub updated_at: Option<DateTime<Utc>>,
 }
 
@@ -100,14 +100,14 @@ impl UserKpi {
     /// Find KPIs with positive PNL
     pub fn find_profitable(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
         user_kpis::table
-            .filter(user_kpis::all_time_pnl.gt(BigDecimal::from(0)))
+            .filter(user_kpis::all_time_pnl.gt(Decimal::from(0)))
             .load(conn)
     }
 
     /// Find KPIs with negative PNL
     pub fn find_losing(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
         user_kpis::table
-            .filter(user_kpis::all_time_pnl.lt(BigDecimal::from(0)))
+            .filter(user_kpis::all_time_pnl.lt(Decimal::from(0)))
             .load(conn)
     }
 
@@ -178,16 +178,16 @@ impl UserKpi {
         let new_kpi = NewUserKpi {
             user_address: user_address.to_string(),
             vault_id: vault_id.to_string(),
-            all_time_pnl: kpi_data.all_time_pnl.clone(),
-            unrealized_pnl: kpi_data.unrealized_pnl.clone(),
-            realized_pnl: kpi_data.realized_pnl.clone(),
-            max_drawdown_pct: kpi_data.max_drawdown_pct.clone(),
-            sharpe_ratio: kpi_data.sharpe_ratio.clone(),
-            total_deposits: kpi_data.total_deposits.clone(),
-            total_withdrawals: kpi_data.total_withdrawals.clone(),
-            total_fees_paid: kpi_data.total_fees_paid.clone(),
+            all_time_pnl: kpi_data.all_time_pnl,
+            unrealized_pnl: kpi_data.unrealized_pnl,
+            realized_pnl: kpi_data.realized_pnl,
+            max_drawdown_pct: kpi_data.max_drawdown_pct,
+            sharpe_ratio: kpi_data.sharpe_ratio,
+            total_deposits: kpi_data.total_deposits,
+            total_withdrawals: kpi_data.total_withdrawals,
+            total_fees_paid: kpi_data.total_fees_paid,
             calculated_at: kpi_data.calculated_at,
-            share_price_used: kpi_data.share_price_used.clone(),
+            share_price_used: kpi_data.share_price_used,
         };
 
         diesel::insert_into(user_kpis::table)
@@ -253,7 +253,7 @@ impl UserKpi {
     /// Count profitable users
     pub fn count_profitable(conn: &mut diesel::PgConnection) -> QueryResult<i64> {
         user_kpis::table
-            .filter(user_kpis::all_time_pnl.gt(BigDecimal::from(0)))
+            .filter(user_kpis::all_time_pnl.gt(Decimal::from(0)))
             .count()
             .get_result(conn)
     }
@@ -261,15 +261,13 @@ impl UserKpi {
     /// Count losing users
     pub fn count_losing(conn: &mut diesel::PgConnection) -> QueryResult<i64> {
         user_kpis::table
-            .filter(user_kpis::all_time_pnl.lt(BigDecimal::from(0)))
+            .filter(user_kpis::all_time_pnl.lt(Decimal::from(0)))
             .count()
             .get_result(conn)
     }
 
     /// Calculate average all-time PNL
-    pub fn average_all_time_pnl(
-        conn: &mut diesel::PgConnection,
-    ) -> QueryResult<Option<BigDecimal>> {
+    pub fn average_all_time_pnl(conn: &mut diesel::PgConnection) -> QueryResult<Option<Decimal>> {
         use diesel::dsl::avg;
 
         user_kpis::table
@@ -279,9 +277,7 @@ impl UserKpi {
     }
 
     /// Calculate average Sharpe ratio
-    pub fn average_sharpe_ratio(
-        conn: &mut diesel::PgConnection,
-    ) -> QueryResult<Option<BigDecimal>> {
+    pub fn average_sharpe_ratio(conn: &mut diesel::PgConnection) -> QueryResult<Option<Decimal>> {
         use diesel::dsl::avg;
 
         user_kpis::table
@@ -291,7 +287,7 @@ impl UserKpi {
     }
 
     /// Calculate total deposits across all users
-    pub fn total_deposits(conn: &mut diesel::PgConnection) -> QueryResult<Option<BigDecimal>> {
+    pub fn total_deposits(conn: &mut diesel::PgConnection) -> QueryResult<Option<Decimal>> {
         use diesel::dsl::sum;
 
         user_kpis::table
@@ -301,7 +297,7 @@ impl UserKpi {
     }
 
     /// Calculate total withdrawals across all users
-    pub fn total_withdrawals(conn: &mut diesel::PgConnection) -> QueryResult<Option<BigDecimal>> {
+    pub fn total_withdrawals(conn: &mut diesel::PgConnection) -> QueryResult<Option<Decimal>> {
         use diesel::dsl::sum;
 
         user_kpis::table
@@ -311,7 +307,7 @@ impl UserKpi {
     }
 
     /// Calculate total fees paid across all users
-    pub fn total_fees_paid(conn: &mut diesel::PgConnection) -> QueryResult<Option<BigDecimal>> {
+    pub fn total_fees_paid(conn: &mut diesel::PgConnection) -> QueryResult<Option<Decimal>> {
         use diesel::dsl::sum;
 
         user_kpis::table

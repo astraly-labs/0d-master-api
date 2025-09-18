@@ -8,7 +8,7 @@ pub struct IndexerTask {
 }
 
 impl IndexerTask {
-    pub fn new(db_pool: Pool) -> Self {
+    pub const fn new(db_pool: Pool) -> Self {
         Self { db_pool }
     }
 }

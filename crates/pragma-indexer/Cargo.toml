@@ -27,3 +27,5 @@ starknet.workspace = true
 task-supervisor.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+serde_json.workspace = true
+rust_decimal.workspace = true

@@ -1,6 +1,6 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
@@ -18,10 +18,10 @@ pub struct UserTransaction {
     pub vault_id: String,
     pub type_: String,
     pub status: String,
-    pub amount: BigDecimal,
-    pub shares_amount: Option<BigDecimal>,
-    pub share_price: Option<BigDecimal>,
-    pub gas_fee: Option<BigDecimal>,
+    pub amount: Decimal,
+    pub shares_amount: Option<Decimal>,
+    pub share_price: Option<Decimal>,
+    pub gas_fee: Option<Decimal>,
     pub metadata: Option<JsonValue>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -37,10 +37,10 @@ pub struct NewUserTransaction {
     pub vault_id: String,
     pub type_: String,
     pub status: String,
-    pub amount: BigDecimal,
-    pub shares_amount: Option<BigDecimal>,
-    pub share_price: Option<BigDecimal>,
-    pub gas_fee: Option<BigDecimal>,
+    pub amount: Decimal,
+    pub shares_amount: Option<Decimal>,
+    pub share_price: Option<Decimal>,
+    pub gas_fee: Option<Decimal>,
     pub metadata: Option<JsonValue>,
 }
 
@@ -48,9 +48,9 @@ pub struct NewUserTransaction {
 #[diesel(table_name = user_transactions)]
 pub struct UserTransactionUpdate {
     pub status: Option<String>,
-    pub shares_amount: Option<BigDecimal>,
-    pub share_price: Option<BigDecimal>,
-    pub gas_fee: Option<BigDecimal>,
+    pub shares_amount: Option<Decimal>,
+    pub share_price: Option<Decimal>,
+    pub gas_fee: Option<Decimal>,
     pub metadata: Option<JsonValue>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -291,7 +291,7 @@ impl UserTransaction {
     pub fn total_volume_by_vault(
         vault_id: &str,
         conn: &mut diesel::PgConnection,
-    ) -> QueryResult<Option<BigDecimal>> {
+    ) -> QueryResult<Option<Decimal>> {
         use diesel::dsl::sum;
 
         user_transactions::table
@@ -305,7 +305,7 @@ impl UserTransaction {
     pub fn total_volume_by_user(
         user_address: &str,
         conn: &mut diesel::PgConnection,
-    ) -> QueryResult<Option<BigDecimal>> {
+    ) -> QueryResult<Option<Decimal>> {
         use diesel::dsl::sum;
 
         user_transactions::table
@@ -313,5 +313,78 @@ impl UserTransaction {
             .filter(user_transactions::status.eq(TransactionStatus::Confirmed.as_str()))
             .select(sum(user_transactions::amount))
             .first(conn)
+    }
+
+    /// Calculate total deposits for a user in a specific vault
+    pub fn total_deposits_by_user_and_vault(
+        user_address: &str,
+        vault_id: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Option<Decimal>> {
+        use diesel::dsl::sum;
+
+        user_transactions::table
+            .filter(user_transactions::user_address.eq(user_address))
+            .filter(user_transactions::vault_id.eq(vault_id))
+            .filter(user_transactions::type_.eq(TransactionType::Deposit.as_str()))
+            .filter(user_transactions::status.eq(TransactionStatus::Confirmed.as_str()))
+            .select(sum(user_transactions::amount))
+            .first(conn)
+    }
+
+    /// Find transactions for a user in a specific vault with pagination
+    /// Uses ID-based cursor pagination for efficient database queries
+    pub fn find_by_user_and_vault_paginated(
+        user_address: &str,
+        vault_id: &str,
+        transaction_type: Option<&str>,
+        cursor_id: Option<i32>,
+        limit: i64,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<Self>> {
+        use diesel::prelude::*;
+
+        match (transaction_type, cursor_id) {
+            (Some(tx_type), Some(cursor)) => {
+                // Both filters applied
+                user_transactions::table
+                    .filter(user_transactions::user_address.eq(user_address))
+                    .filter(user_transactions::vault_id.eq(vault_id))
+                    .filter(user_transactions::type_.eq(tx_type))
+                    .filter(user_transactions::id.lt(cursor))
+                    .order(user_transactions::block_timestamp.desc())
+                    .limit(limit)
+                    .load(conn)
+            }
+            (Some(tx_type), None) => {
+                // Only transaction type filter
+                user_transactions::table
+                    .filter(user_transactions::user_address.eq(user_address))
+                    .filter(user_transactions::vault_id.eq(vault_id))
+                    .filter(user_transactions::type_.eq(tx_type))
+                    .order(user_transactions::block_timestamp.desc())
+                    .limit(limit)
+                    .load(conn)
+            }
+            (None, Some(cursor)) => {
+                // Only cursor filter
+                user_transactions::table
+                    .filter(user_transactions::user_address.eq(user_address))
+                    .filter(user_transactions::vault_id.eq(vault_id))
+                    .filter(user_transactions::id.lt(cursor))
+                    .order(user_transactions::block_timestamp.desc())
+                    .limit(limit)
+                    .load(conn)
+            }
+            (None, None) => {
+                // No filters
+                user_transactions::table
+                    .filter(user_transactions::user_address.eq(user_address))
+                    .filter(user_transactions::vault_id.eq(vault_id))
+                    .order(user_transactions::block_timestamp.desc())
+                    .limit(limit)
+                    .load(conn)
+            }
+        }
     }
 }
