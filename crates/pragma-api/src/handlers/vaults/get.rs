@@ -52,8 +52,7 @@ pub async fn get_vault(
 
     let tvl = fetch_vault_portfolio(&client, &vault.api_endpoint)
         .await
-        .map(|p| p.tvl_in_usd)
-        .unwrap_or_else(|| "0".to_string());
+        .map_or_else(|| "0".to_string(), |p| p.tvl_in_usd);
 
     let share_price = fetch_vault_share_price(&client, &vault.api_endpoint)
         .await

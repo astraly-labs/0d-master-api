@@ -43,11 +43,10 @@ pub async fn get_vault_stats(
             tracing::error!("Database interaction error: {}", e);
             ApiError::InternalServerError
         })?
-        .map_err(|e| match e {
-            diesel::result::Error::NotFound => {
-                ApiError::NotFound(format!("Vault {} not found", vault_id))
-            }
-            _ => {
+        .map_err(|e| {
+            if e == diesel::result::Error::NotFound {
+                ApiError::NotFound(format!("Vault {vault_id} not found"))
+            } else {
                 tracing::error!("Failed to fetch vault: {}", e);
                 ApiError::InternalServerError
             }
@@ -58,8 +57,7 @@ pub async fn get_vault_stats(
     let portfolio = fetch_vault_portfolio(&client, &vault.api_endpoint).await;
     let tvl = portfolio
         .as_ref()
-        .map(|p| p.tvl_in_usd.clone())
-        .unwrap_or_else(|| "0".to_string());
+        .map_or_else(|| "0".to_string(), |p| p.tvl_in_usd.clone());
     let apr = portfolio
         .as_ref()
         .and_then(|p| fraction_str_to_pct_opt(&p.last_30d_apr))

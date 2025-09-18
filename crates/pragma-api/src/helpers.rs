@@ -77,10 +77,7 @@ pub fn fraction_str_to_pct_opt<S: AsRef<str>>(s: S) -> Option<f64> {
     if st.is_empty() || st.eq_ignore_ascii_case("na") {
         return None;
     }
-    match st.parse::<f64>() {
-        Ok(v) => Some(v * 100.0),
-        Err(_) => None,
-    }
+    st.parse::<f64>().map_or(None, |v| Some(v * 100.0))
 }
 
 pub fn map_status(status: &str) -> String {

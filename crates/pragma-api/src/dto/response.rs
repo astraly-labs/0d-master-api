@@ -1,3 +1,4 @@
+#![allow(clippy::option_if_let_else)]
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
