@@ -4,7 +4,7 @@ use crate::{
     AppState,
     dto::{VaultListItem, VaultListResponse},
     errors::ApiError,
-    helpers::{fetch_vault_stats, http_client, map_status},
+    helpers::{fetch_vault_portfolio, http_client, map_status},
 };
 use pragma_db::models::Vault;
 use reqwest::StatusCode as HttpStatusCode;
@@ -42,15 +42,15 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
 
     let mut items = Vec::with_capacity(vaults.len());
     for vault in vaults {
-        let stats_url = format!("{}/stats", vault.api_endpoint.trim_end_matches('/'));
+        let stats_url = format!("{}/portfolio", vault.api_endpoint.trim_end_matches('/'));
 
-        let tvl = fetch_vault_stats(&client, &vault.api_endpoint)
-            .await
-            .map_or_else(|| {
-                let code: Option<HttpStatusCode> = None;
-                tracing::warn!(vault_id = %vault.id, url = %stats_url, status = ?code, "Failed to fetch vault stats");
-                "0".to_string()
-            }, |vault_stats| vault_stats.tvl);
+        let tvl = if let Some(p) = fetch_vault_portfolio(&client, &vault.api_endpoint).await {
+            p.tvl_in_usd
+        } else {
+            let code: Option<HttpStatusCode> = None;
+            tracing::warn!(vault_id = %vault.id, url = %stats_url, status = ?code, "Failed to fetch vault stats");
+            "0".to_string()
+        };
 
         // Map DB status to API spec values: active -> live
         let status = map_status(&vault.status);

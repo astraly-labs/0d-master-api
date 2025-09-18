@@ -2,19 +2,447 @@
   "openapi": "3.1.0",
   "info": {
     "title": "pragma-api",
-    "description": "Template to create a new service using axum and diesel.",
+    "description": "0D Master API for vaults",
     "license": {
       "name": "MIT",
       "identifier": "MIT"
     },
     "version": "0.1.0"
   },
-  "paths": {},
-  "components": {},
+  "servers": [
+    {
+      "url": "https://{environment}.0d.finance/api/v1",
+      "variables": {
+        "environment": {
+          "default": "devnet",
+          "enum": [
+            "devnet",
+            "production"
+          ]
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/vaults": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "list_vaults",
+        "responses": {
+          "200": {
+            "description": "Vault list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vault metadata with live values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vault"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/stats": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_stats",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vault statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultStats"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Contract": {
+        "type": "object",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          }
+        }
+      },
+      "DepositConstraints": {
+        "type": "object",
+        "properties": {
+          "max_deposit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_deposit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paused": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
+      "Icons": {
+        "type": "object",
+        "properties": {
+          "dark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "light": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ResponseStatus": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "error"
+        ]
+      },
+      "Vault": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "chain",
+          "symbol",
+          "base_asset",
+          "status",
+          "tvl",
+          "share_price",
+          "perf_fee_bps",
+          "contract",
+          "deposit_constraints",
+          "withdraw_constraints",
+          "icons",
+          "api_endpoint"
+        ],
+        "properties": {
+          "api_endpoint": {
+            "type": "string"
+          },
+          "base_asset": {
+            "type": "string"
+          },
+          "chain": {
+            "type": "string"
+          },
+          "chain_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contract": {
+            "$ref": "#/components/schemas/Contract"
+          },
+          "deposit_constraints": {
+            "$ref": "#/components/schemas/DepositConstraints"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "docs_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "icons": {
+            "$ref": "#/components/schemas/Icons"
+          },
+          "id": {
+            "type": "string"
+          },
+          "inception_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mgmt_fee_bps": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "perf_fee_bps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "share_price": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "strategy_brief": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "tvl": {
+            "type": "string"
+          },
+          "withdraw_constraints": {
+            "$ref": "#/components/schemas/WithdrawConstraints"
+          }
+        }
+      },
+      "VaultListItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "chain",
+          "symbol",
+          "tvl",
+          "status"
+        ],
+        "properties": {
+          "chain": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "tvl": {
+            "type": "string"
+          }
+        }
+      },
+      "VaultListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VaultListItem"
+            }
+          }
+        }
+      },
+      "VaultPortfolioDTO": {
+        "type": "object",
+        "description": "Vault portfolio snapshot as returned by an individual vault API\nExample corresponds to Carry Trade vault.",
+        "required": [
+          "age_days",
+          "last_30d_apr",
+          "num_depositors",
+          "profit_factor",
+          "tvl_in_usd",
+          "total_exposure_in_usd",
+          "total_pnl",
+          "free_collateral",
+          "balances"
+        ],
+        "properties": {
+          "age_days": {
+            "type": "string"
+          },
+          "balances": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "propertyNames": {
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "free_collateral": {
+            "type": "string"
+          },
+          "last_30d_apr": {
+            "type": "string"
+          },
+          "num_depositors": {
+            "type": "string"
+          },
+          "profit_factor": {
+            "type": "string"
+          },
+          "total_exposure_in_usd": {
+            "type": "string"
+          },
+          "total_pnl": {
+            "type": "string"
+          },
+          "tvl_in_usd": {
+            "type": "string"
+          }
+        }
+      },
+      "VaultStats": {
+        "type": "object",
+        "required": [
+          "tvl",
+          "past_month_apr_pct"
+        ],
+        "properties": {
+          "past_month_apr_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "tvl": {
+            "type": "string"
+          }
+        }
+      },
+      "WithdrawConstraints": {
+        "type": "object",
+        "properties": {
+          "instant_liquidity": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "instant_slippage_max_bps": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "redeem_24h_threshold_pct_of_aum": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "redeem_48h_above_threshold": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  },
   "tags": [
     {
       "name": "pragma-bin",
-      "description": "pragma, auth service"
+      "description": "0d, master api"
     }
   ]
 }

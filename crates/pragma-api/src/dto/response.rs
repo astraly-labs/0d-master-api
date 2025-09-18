@@ -1,5 +1,4 @@
 #![allow(clippy::option_if_let_else)]
-
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -11,7 +10,6 @@ pub enum ResponseStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[allow(clippy::option_if_let_else)]
 pub struct ApiResponse<T> {
     pub status: ResponseStatus,
     #[serde(skip_serializing_if = "Option::is_none")]

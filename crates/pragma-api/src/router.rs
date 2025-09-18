@@ -30,8 +30,8 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
 
     Router::new()
         .route("/health", get(health))
-        .nest("/vaults", vaults_router)
-        .nest("/users", users_router)
+        .nest("/v1/vaults", vaults_router)
+        .nest("/v1/users", users_router)
         .merge(SwaggerUi::new("/v1/docs").url("/v1/docs/openapi.json", open_api))
         .fallback(handler_404)
 }
