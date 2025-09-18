@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use pragma_db::models::user_transaction::{TransactionStatus, TransactionType};
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum DisplayCurrency {
@@ -26,24 +28,6 @@ pub struct UserPositionSummary {
     pub first_deposit_at: Option<DateTime<Utc>>,
     pub total_deposits: String,
     pub all_time_earned: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum TransactionType {
-    Deposit,
-    Withdraw,
-    Fee,
-    Rebalance,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum TransactionStatus {
-    Pending,
-    Confirmed,
-    Failed,
-    Cancelled,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -82,16 +66,16 @@ impl From<pragma_db::models::UserTransaction> for UserTransaction {
             transaction_type: match tx.type_.as_str() {
                 "deposit" => TransactionType::Deposit,
                 "withdraw" => TransactionType::Withdraw,
-                "fee" => TransactionType::Fee,
-                "rebalance" => TransactionType::Rebalance,
-                _ => unreachable!("Invalid transaction type"),
+                "transfer" => TransactionType::Transfer,
+                "claim" => TransactionType::Claim,
+                _ => unreachable!("Invalid transaction type: {}", tx.type_),
             },
             status: match tx.status.as_str() {
                 "pending" => TransactionStatus::Pending,
                 "confirmed" => TransactionStatus::Confirmed,
                 "failed" => TransactionStatus::Failed,
                 "cancelled" => TransactionStatus::Cancelled,
-                _ => unreachable!("Invalid transaction type"),
+                _ => unreachable!("Invalid transaction status: {}", tx.status),
             },
             amount: tx.amount.to_string(),
             tx_hash: tx.tx_hash,

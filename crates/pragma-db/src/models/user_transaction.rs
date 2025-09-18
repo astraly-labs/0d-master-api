@@ -3,6 +3,7 @@ use diesel::prelude::*;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use utoipa::ToSchema;
 
 use crate::schema::user_transactions;
 
@@ -56,7 +57,8 @@ pub struct UserTransactionUpdate {
 }
 
 // Transaction types enum for better type safety
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum TransactionType {
     Deposit,
     Withdraw,
@@ -76,7 +78,8 @@ impl TransactionType {
 }
 
 // Transaction status enum for better type safety
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum TransactionStatus {
     Pending,
     Confirmed,
