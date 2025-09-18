@@ -1,0 +1,6 @@
+apiVersion: v2
+name: 0d-master-api
+description: 0d-master-api is a Helm chart for Kubernetes
+version: 0.1.11
+appVersion: "0.1.11"
+icon: https://raw.githubusercontent.com/kubernetes/kubernetes/refs/heads/master/logo/logo.svg

@@ -18,7 +18,7 @@ pub struct ApiResponse<T> {
 }
 
 impl<T> ApiResponse<T> {
-    pub fn ok(data: T) -> Self {
+    pub const fn ok(data: T) -> Self {
         Self {
             status: ResponseStatus::Ok,
             data: Some(data),
@@ -26,7 +26,7 @@ impl<T> ApiResponse<T> {
         }
     }
 
-    pub fn error(msg: String) -> Self {
+    pub const fn error(msg: String) -> Self {
         Self {
             status: ResponseStatus::Error,
             data: None,

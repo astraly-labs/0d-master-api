@@ -38,11 +38,10 @@ pub async fn get_vault(
             tracing::error!("Database interaction error: {}", e);
             ApiError::InternalServerError
         })?
-        .map_err(|e| match e {
-            diesel::result::Error::NotFound => {
-                ApiError::NotFound(format!("Vault {} not found", vault_id))
-            }
-            _ => {
+        .map_err(|e| {
+            if e == diesel::result::Error::NotFound {
+                ApiError::NotFound(format!("Vault {vault_id} not found"))
+            } else {
                 tracing::error!("Failed to fetch vault: {}", e);
                 ApiError::InternalServerError
             }
