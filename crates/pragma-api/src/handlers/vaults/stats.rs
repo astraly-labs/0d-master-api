@@ -8,7 +8,7 @@ use crate::{
     AppState,
     dto::VaultStats,
     errors::ApiError,
-    helpers::{fetch_vault_stats, http_client},
+    helpers::{fetch_vault_portfolio, fraction_str_to_pct_opt, http_client},
 };
 use pragma_db::models::Vault;
 
@@ -53,14 +53,17 @@ pub async fn get_vault_stats(
             }
         })?;
 
-    // Call the vault's stats endpoint via helper
+    // Call the vault's portfolio/stats endpoint via helper
     let client = http_client()?;
-    let stats = fetch_vault_stats(&client, &vault.api_endpoint).await;
-    let tvl = stats
+    let portfolio = fetch_vault_portfolio(&client, &vault.api_endpoint).await;
+    let tvl = portfolio
         .as_ref()
-        .map(|s| s.tvl.clone())
+        .map(|p| p.tvl_in_usd.clone())
         .unwrap_or_else(|| "0".to_string());
-    let apr = stats.and_then(|s| s.past_month_apr_pct).unwrap_or(0.0);
+    let apr = portfolio
+        .as_ref()
+        .and_then(|p| fraction_str_to_pct_opt(&p.last_30d_apr))
+        .unwrap_or(0.0);
 
     Ok(Json(VaultStats {
         tvl,

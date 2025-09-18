@@ -13,12 +13,12 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
     // Group vault-related endpoints under a dedicated "/vaults" router
     let vaults_router = Router::new()
         .route("/", get(handlers::list_vaults))
-        .route("/:vault_id", get(handlers::get_vault))
-        .route("/:vault_id/stats", get(handlers::get_vault_stats));
+        .route("/{vault_id}", get(handlers::get_vault))
+        .route("/{vault_id}/stats", get(handlers::get_vault_stats));
 
     Router::new()
         .route("/health", get(health))
-        .nest("/vaults", vaults_router)
+        .nest("/v1/vaults", vaults_router)
         .merge(SwaggerUi::new("/v1/docs").url("/v1/docs/openapi.json", open_api))
         .fallback(handler_404)
 }

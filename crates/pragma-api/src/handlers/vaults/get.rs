@@ -4,7 +4,7 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::helpers::{fetch_vault_share_price, fetch_vault_stats, http_client, map_status};
+use crate::helpers::{fetch_vault_portfolio, fetch_vault_share_price, http_client, map_status};
 use crate::{AppState, dto::Vault as VaultDto, errors::ApiError};
 use pragma_db::models::Vault;
 
@@ -51,9 +51,9 @@ pub async fn get_vault(
     // Fetch non-metadata (tvl & share_price) from the vault's API endpoint.
     let client = http_client()?;
 
-    let tvl = fetch_vault_stats(&client, &vault.api_endpoint)
+    let tvl = fetch_vault_portfolio(&client, &vault.api_endpoint)
         .await
-        .map(|s| s.tvl)
+        .map(|p| p.tvl_in_usd)
         .unwrap_or_else(|| "0".to_string());
 
     let share_price = fetch_vault_share_price(&client, &vault.api_endpoint)
