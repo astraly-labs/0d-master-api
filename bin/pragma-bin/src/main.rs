@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
         panic!("Could not init telemetry: {e}");
     }
 
-    let pool = init_pool(&app_name, &database_url)?;
+    let pool = init_pool(app_name, &database_url)?;
     run_migrations(&pool).await;
 
     let app_state = AppState { pool: pool.clone() };

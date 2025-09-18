@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 anyhow.workspace = true
+bigdecimal.workspace = true
 chrono.workspace = true
 clap.workspace = true
 deadpool-diesel.workspace = true
@@ -26,4 +27,3 @@ serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
-bigdecimal.workspace = true

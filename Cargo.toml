@@ -104,6 +104,11 @@ uuid = { version = "1.4", features = ["fast-rng", "v4", "serde"] }
 starknet = "0.17.0"
 task-supervisor = { version = "0.3.3", features = ["with_tracing"] }
 bigdecimal = { version = "0.4.8", features = ["serde"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+tower_governor = { version = "0.8.0", features = ["axum", "tracing"] }
 
 # OpenAPI
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
@@ -115,6 +120,8 @@ diesel = { version = "2.1", features = [
     "postgres",
     "extras",
     "postgres_backend",
+    "numeric",
+    "chrono",
 ] }
 diesel-async = { version = "0.4.1", features = ["postgres"] }
 diesel_migrations = "2"
