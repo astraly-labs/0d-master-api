@@ -46,15 +46,15 @@ diesel::table! {
         realized_pnl -> Nullable<Numeric>,
         max_drawdown_pct -> Nullable<Numeric>,
         sharpe_ratio -> Nullable<Numeric>,
-        sortino_ratio -> Nullable<Numeric>,
         total_deposits -> Nullable<Numeric>,
         total_withdrawals -> Nullable<Numeric>,
         total_fees_paid -> Nullable<Numeric>,
         calculated_at -> Nullable<Timestamptz>,
         share_price_used -> Nullable<Numeric>,
-        share_balance -> Nullable<Numeric>,
         created_at -> Nullable<Timestamptz>,
         updated_at -> Nullable<Timestamptz>,
+        sortino_ratio -> Nullable<Numeric>,
+        share_balance -> Nullable<Numeric>,
     }
 }
 

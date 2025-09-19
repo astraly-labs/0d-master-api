@@ -17,15 +17,15 @@ pub struct UserKpi {
     pub realized_pnl: Option<Decimal>,
     pub max_drawdown_pct: Option<Decimal>,
     pub sharpe_ratio: Option<Decimal>,
-    pub sortino_ratio: Option<Decimal>,
     pub total_deposits: Option<Decimal>,
     pub total_withdrawals: Option<Decimal>,
     pub total_fees_paid: Option<Decimal>,
     pub calculated_at: Option<DateTime<Utc>>,
     pub share_price_used: Option<Decimal>,
-    pub share_balance: Option<Decimal>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub sortino_ratio: Option<Decimal>,
+    pub share_balance: Option<Decimal>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Insertable)]

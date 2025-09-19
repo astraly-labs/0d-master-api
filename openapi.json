@@ -24,6 +24,209 @@
     }
   ],
   "paths": {
+    "/users/{address}": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "operationId": "get_user_profile",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "User wallet address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/users/{address}/vaults/{vault_id}/kpis": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "operationId": "get_user_kpis",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "User wallet address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User performance KPIs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserKpi"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User KPIs not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/users/{address}/vaults/{vault_id}/summary": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "operationId": "get_user_position_summary",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "User wallet address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User position summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPositionSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User position not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/users/{address}/vaults/{vault_id}/transactions": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "operationId": "get_user_transaction_history",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "User wallet address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Transaction type filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of transactions to return (1-200, default: 50)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Pagination cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User transaction history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserTransactionHistory"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User or vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/vaults": {
       "get": {
         "tags": [
@@ -158,6 +361,13 @@
           }
         }
       },
+      "DisplayCurrency": {
+        "type": "string",
+        "enum": [
+          "usd",
+          "usdc"
+        ]
+      },
       "Icons": {
         "type": "object",
         "properties": {
@@ -181,6 +391,181 @@
           "ok",
           "error"
         ]
+      },
+      "TransactionStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "confirmed",
+          "failed",
+          "cancelled"
+        ]
+      },
+      "TransactionType": {
+        "type": "string",
+        "enum": [
+          "deposit",
+          "withdraw",
+          "transfer",
+          "claim"
+        ]
+      },
+      "UserKpi": {
+        "type": "object",
+        "required": [
+          "as_of",
+          "all_time_pnl_usd",
+          "unrealized_pnl_usd",
+          "realized_pnl_usd",
+          "max_drawdown_pct",
+          "sharpe",
+          "sortino"
+        ],
+        "properties": {
+          "all_time_pnl_usd": {
+            "type": "string"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "max_drawdown_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "realized_pnl_usd": {
+            "type": "string"
+          },
+          "sharpe": {
+            "type": "number",
+            "format": "double"
+          },
+          "sortino": {
+            "type": "number",
+            "format": "double"
+          },
+          "unrealized_pnl_usd": {
+            "type": "string"
+          }
+        }
+      },
+      "UserPositionSummary": {
+        "type": "object",
+        "required": [
+          "vault_id",
+          "as_of",
+          "position_value_usd",
+          "share_balance",
+          "share_price",
+          "total_deposits",
+          "all_time_earned"
+        ],
+        "properties": {
+          "all_time_earned": {
+            "type": "string"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "first_deposit_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "position_value_usd": {
+            "type": "string"
+          },
+          "share_balance": {
+            "type": "string"
+          },
+          "share_price": {
+            "type": "string"
+          },
+          "total_deposits": {
+            "type": "string"
+          },
+          "vault_id": {
+            "type": "string"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "required": [
+          "address",
+          "chain",
+          "display_currency"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "chain": {
+            "type": "string"
+          },
+          "display_currency": {
+            "$ref": "#/components/schemas/DisplayCurrency"
+          }
+        }
+      },
+      "UserTransaction": {
+        "type": "object",
+        "required": [
+          "id",
+          "vault_id",
+          "type",
+          "status",
+          "amount",
+          "tx_hash",
+          "timestamp"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tx_hash": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
+          "vault_id": {
+            "type": "string"
+          }
+        }
+      },
+      "UserTransactionHistory": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserTransaction"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       },
       "Vault": {
         "type": "object",
@@ -443,6 +828,14 @@
     {
       "name": "pragma-bin",
       "description": "0d, master api"
+    },
+    {
+      "name": "User",
+      "description": "User profile endpoints"
+    },
+    {
+      "name": "Vaults",
+      "description": "Vault management endpoints"
     }
   ]
 }

@@ -71,7 +71,8 @@ impl SupervisedTask for ExtendedVault {
                             self.update_indexer_state(block_number, block_timestamp).await?;
                         }
                         OutputEvent::Synced => {
-                            todo!()
+                            tracing::info!("[🔢 Accounting] 🥳 Extended Vault indexer reached the tip of the chain!");
+                            // TODO: Should we flag as synced?
                         }
                         // NOTE: Never happens for now. See later when apibara upgrades?
                         OutputEvent::Finalized(_) | OutputEvent::Invalidated(_) => { }
@@ -88,8 +89,9 @@ impl SupervisedTask for ExtendedVault {
 }
 
 impl ExtendedVault {
+    // TODO: this should be dynamic based on the vault address
     pub const fn vault_id() -> &'static str {
-        "starknet-extended-vault"
+        "1"
     }
 
     async fn handle_event(
@@ -100,10 +102,12 @@ impl ExtendedVault {
     ) -> Result<(), anyhow::Error> {
         match event {
             VaultEvent::Deposit(deposit) => {
+                tracing::info!("💰 Handling deposit event: {deposit:?}");
                 self.handle_deposit_event(deposit, block_number, block_timestamp)
                     .await?;
             }
             VaultEvent::RedeemRequested(redeem) => {
+                tracing::info!("💸 Handling redeem requested event: {redeem:?}");
                 self.handle_redeem_requested_event(redeem, block_number, block_timestamp)
                     .await?;
             }
@@ -348,7 +352,7 @@ impl ExtendedVault {
                     .try_into()
                     .expect("[ExtendedVault] 🌯 Block number too large for i64"),
                 None, // No timestamp for initialization
-                Some(IndexerStatus::Initialized),
+                Some(IndexerStatus::Active),
                 conn,
             )
         })
@@ -376,7 +380,7 @@ impl ExtendedVault {
                     .try_into()
                     .expect("[ExtendedVault] 🌯 Block number too large for i64"),
                 Some(block_timestamp),
-                Some(IndexerStatus::Running),
+                Some(IndexerStatus::Active),
                 conn,
             )
         })

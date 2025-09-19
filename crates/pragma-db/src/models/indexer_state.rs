@@ -7,8 +7,8 @@ use crate::schema::indexer_state;
 /// Indexer status variants
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IndexerStatus {
-    Initialized,
-    Running,
+    Active,
+    Paused,
     Error,
 }
 
@@ -16,8 +16,8 @@ impl IndexerStatus {
     /// Convert to string for database storage
     pub const fn as_str(&self) -> &'static str {
         match self {
-            Self::Initialized => "initialized",
-            Self::Running => "running",
+            Self::Active => "active",
+            Self::Paused => "paused",
             Self::Error => "error",
         }
     }
@@ -38,8 +38,8 @@ impl From<IndexerStatus> for String {
 impl From<String> for IndexerStatus {
     fn from(s: String) -> Self {
         match s.as_str() {
-            "initialized" => Self::Initialized,
-            "running" => Self::Running,
+            "active" => Self::Active,
+            "paused" => Self::Paused,
             "error" => Self::Error,
             _ => unreachable!("Invalid indexer status: {s}"),
         }
@@ -49,8 +49,8 @@ impl From<String> for IndexerStatus {
 impl From<&str> for IndexerStatus {
     fn from(s: &str) -> Self {
         match s {
-            "initialized" => Self::Initialized,
-            "running" => Self::Running,
+            "active" => Self::Active,
+            "paused" => Self::Paused,
             "error" => Self::Error,
             _ => unreachable!("Invalid indexer status: {s}"),
         }
@@ -91,7 +91,7 @@ impl IndexerState {
 
     /// Check if the indexer is running
     pub fn is_running(&self) -> bool {
-        self.status_enum() == Some(IndexerStatus::Running)
+        self.status_enum() == Some(IndexerStatus::Active)
     }
 }
 
