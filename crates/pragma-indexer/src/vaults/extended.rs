@@ -18,6 +18,8 @@ use rust_decimal::Decimal;
 use starknet::core::types::Felt;
 use task_supervisor::{SupervisedTask, TaskError};
 
+use crate::vaults::helpers::felt_to_hex_str;
+
 #[derive(Clone)]
 pub struct ExtendedVault {
     pub current_block: u64,
@@ -102,12 +104,10 @@ impl ExtendedVault {
     ) -> Result<(), anyhow::Error> {
         match event {
             VaultEvent::Deposit(deposit) => {
-                tracing::info!("💰 Handling deposit event: {deposit:?}");
                 self.handle_deposit_event(deposit, block_number, block_timestamp)
                     .await?;
             }
             VaultEvent::RedeemRequested(redeem) => {
-                tracing::info!("💸 Handling redeem requested event: {redeem:?}");
                 self.handle_redeem_requested_event(redeem, block_number, block_timestamp)
                     .await?;
             }
@@ -131,9 +131,9 @@ impl ExtendedVault {
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
-        tracing::debug!("💰 Handling deposit event: {deposit:?}");
+        tracing::info!("💰 Handling deposit event: {deposit:?}");
 
-        let user_address = deposit.owner.to_string();
+        let user_address = felt_to_hex_str(deposit.owner);
         self.ensure_user_exists(user_address.clone()).await?;
 
         // NOTE: This is the share price at the time of the deposit
@@ -211,9 +211,9 @@ impl ExtendedVault {
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
-        tracing::debug!("💸 Handling redeem requested event: {redeem:?}");
+        tracing::info!("💸 Handling redeem requested event: {redeem:?}");
 
-        let user_address = redeem.owner.to_string();
+        let user_address = felt_to_hex_str(redeem.owner);
         self.ensure_user_exists(user_address.clone()).await?;
 
         // NOTE: This is the share price at the time of the redeem request
