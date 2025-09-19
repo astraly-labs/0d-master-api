@@ -26,6 +26,10 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
         .route(
             "/{address}/vaults/{vault_id}/transactions",
             get(handlers::get_user_transaction_history),
+        )
+        .route(
+            "/{address}/vaults/{vault_id}/kpis",
+            get(handlers::get_user_kpis),
         );
 
     Router::new()

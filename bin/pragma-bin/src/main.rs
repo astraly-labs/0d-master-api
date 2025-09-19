@@ -10,6 +10,7 @@ use pragma_api::{ApiService, AppState};
 use pragma_common::services::Service;
 use pragma_db::{init_pool, run_migrations};
 use pragma_indexer::task::IndexerTask;
+use pragma_kpi::KpiTask;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,6 +20,9 @@ async fn main() -> Result<()> {
         otel_collector_endpoint,
         database_url,
         api_port,
+        extended_vault_start_block,
+        apibara_api_key,
+        extended_vault_adress,
     } = AuthCli::parse();
 
     let app_name = "0d_master_api";
@@ -33,11 +37,19 @@ async fn main() -> Result<()> {
 
     let api_service = ApiService::new(app_state, "0.0.0.0", api_port);
 
-    let indexer_service = IndexerTask::new(pool.clone());
+    let indexer_service = IndexerTask::new(
+        pool.clone(),
+        extended_vault_adress,
+        extended_vault_start_block,
+        apibara_api_key,
+    );
+
+    let kpi_service = KpiTask::new(pool.clone());
 
     ServiceGroup::default()
         .with(api_service)
         .with(indexer_service)
+        .with(kpi_service)
         .start_and_drive_to_end()
         .await?;
 

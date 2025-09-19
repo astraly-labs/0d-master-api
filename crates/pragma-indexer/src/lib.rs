@@ -10,11 +10,24 @@ use crate::vaults::extended::ExtendedVault;
 
 pub struct IndexerService {
     db_pool: Pool,
+    extended_vault_adress: String,
+    extended_vault_start_block: u64,
+    apibara_api_key: String,
 }
 
 impl IndexerService {
-    pub const fn new(db_pool: Pool) -> Self {
-        Self { db_pool }
+    pub const fn new(
+        db_pool: Pool,
+        extended_vault_adress: String,
+        extended_vault_start_block: u64,
+        apibara_api_key: String,
+    ) -> Self {
+        Self {
+            db_pool,
+            extended_vault_adress,
+            extended_vault_start_block,
+            apibara_api_key,
+        }
     }
 
     pub async fn run_forever(&self) -> anyhow::Result<()> {
@@ -29,10 +42,11 @@ impl IndexerService {
                 ExtendedVault::vault_id(),
                 ExtendedVault {
                     db_pool: self.db_pool.clone(),
-                    current_block: 0,
+                    vault_address: Felt::from_hex(&self.extended_vault_adress)
+                        .expect("Invalid vault address"),
+                    current_block: self.extended_vault_start_block,
                     current_timestamp: None,
-                    apibara_api_key: String::new(),
-                    vault_address: Felt::from_hex("0x0").expect("Invalid vault address"),
+                    apibara_api_key: self.apibara_api_key.clone(),
                 },
             );
 

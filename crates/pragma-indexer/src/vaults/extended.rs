@@ -65,7 +65,7 @@ impl SupervisedTask for ExtendedVault {
                                 return Err(TaskError::from(e));
                             }
 
-                            // Update current block and indexer state
+                            // Update indexer state
                             self.current_block = block_number;
                             self.current_timestamp = Some(block_timestamp);
                             self.update_indexer_state(block_number, block_timestamp).await?;

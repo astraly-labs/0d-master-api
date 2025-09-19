@@ -146,6 +146,19 @@ impl UserTransaction {
             .load(conn)
     }
 
+    /// Find transactions for a user in a specific vault ordered chronologically (for KPI calculations)
+    pub fn find_by_user_and_vault_chronological(
+        user_address: &str,
+        vault_id: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<Self>> {
+        user_transactions::table
+            .filter(user_transactions::user_address.eq(user_address))
+            .filter(user_transactions::vault_id.eq(vault_id))
+            .order(user_transactions::block_timestamp.asc())
+            .load(conn)
+    }
+
     /// Find transactions by type
     pub fn find_by_type(
         transaction_type: TransactionType,

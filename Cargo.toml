@@ -17,6 +17,7 @@ members = [
     "crates/pragma-api",
     "crates/pragma-db",
     "crates/pragma-indexer",
+    "crates/pragma-kpi",
 ]
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -68,6 +69,7 @@ large_stack_arrays = "allow"
 pragma-api = { path = "crates/pragma-api", default-features = false }
 pragma-db = { path = "crates/pragma-db", default-features = false }
 pragma-indexer = { path = "crates/pragma-indexer", default-features = false }
+pragma-kpi = { path = "crates/pragma-kpi", default-features = false }
 
 # Pragma crates
 pragma-common = { version = "0.4.1", features = [
@@ -109,7 +111,11 @@ reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
 ] }
 tower_governor = { version = "0.8.0", features = ["axum", "tracing"] }
-rust_decimal = { version = "1.35", features = ["db-diesel-postgres", "serde"] }
+rust_decimal = { version = "1.35", features = [
+    "db-diesel-postgres",
+    "serde",
+    "maths",
+] }
 
 # OpenAPI
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }

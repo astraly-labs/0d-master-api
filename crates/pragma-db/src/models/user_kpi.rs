@@ -17,11 +17,13 @@ pub struct UserKpi {
     pub realized_pnl: Option<Decimal>,
     pub max_drawdown_pct: Option<Decimal>,
     pub sharpe_ratio: Option<Decimal>,
+    pub sortino_ratio: Option<Decimal>,
     pub total_deposits: Option<Decimal>,
     pub total_withdrawals: Option<Decimal>,
     pub total_fees_paid: Option<Decimal>,
     pub calculated_at: Option<DateTime<Utc>>,
     pub share_price_used: Option<Decimal>,
+    pub share_balance: Option<Decimal>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -36,11 +38,13 @@ pub struct NewUserKpi {
     pub realized_pnl: Option<Decimal>,
     pub max_drawdown_pct: Option<Decimal>,
     pub sharpe_ratio: Option<Decimal>,
+    pub sortino_ratio: Option<Decimal>,
     pub total_deposits: Option<Decimal>,
     pub total_withdrawals: Option<Decimal>,
     pub total_fees_paid: Option<Decimal>,
     pub calculated_at: Option<DateTime<Utc>>,
     pub share_price_used: Option<Decimal>,
+    pub share_balance: Option<Decimal>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, AsChangeset)]
@@ -51,11 +55,13 @@ pub struct UserKpiUpdate {
     pub realized_pnl: Option<Decimal>,
     pub max_drawdown_pct: Option<Decimal>,
     pub sharpe_ratio: Option<Decimal>,
+    pub sortino_ratio: Option<Decimal>,
     pub total_deposits: Option<Decimal>,
     pub total_withdrawals: Option<Decimal>,
     pub total_fees_paid: Option<Decimal>,
     pub calculated_at: Option<DateTime<Utc>>,
     pub share_price_used: Option<Decimal>,
+    pub share_balance: Option<Decimal>,
     pub updated_at: Option<DateTime<Utc>>,
 }
 
@@ -183,11 +189,13 @@ impl UserKpi {
             realized_pnl: kpi_data.realized_pnl,
             max_drawdown_pct: kpi_data.max_drawdown_pct,
             sharpe_ratio: kpi_data.sharpe_ratio,
+            sortino_ratio: kpi_data.sortino_ratio,
             total_deposits: kpi_data.total_deposits,
             total_withdrawals: kpi_data.total_withdrawals,
             total_fees_paid: kpi_data.total_fees_paid,
             calculated_at: kpi_data.calculated_at,
             share_price_used: kpi_data.share_price_used,
+            share_balance: kpi_data.share_balance,
         };
 
         diesel::insert_into(user_kpis::table)
@@ -200,11 +208,13 @@ impl UserKpi {
                 user_kpis::realized_pnl.eq(excluded(user_kpis::realized_pnl)),
                 user_kpis::max_drawdown_pct.eq(excluded(user_kpis::max_drawdown_pct)),
                 user_kpis::sharpe_ratio.eq(excluded(user_kpis::sharpe_ratio)),
+                user_kpis::sortino_ratio.eq(excluded(user_kpis::sortino_ratio)),
                 user_kpis::total_deposits.eq(excluded(user_kpis::total_deposits)),
                 user_kpis::total_withdrawals.eq(excluded(user_kpis::total_withdrawals)),
                 user_kpis::total_fees_paid.eq(excluded(user_kpis::total_fees_paid)),
                 user_kpis::calculated_at.eq(excluded(user_kpis::calculated_at)),
                 user_kpis::share_price_used.eq(excluded(user_kpis::share_price_used)),
+                user_kpis::share_balance.eq(excluded(user_kpis::share_balance)),
                 user_kpis::updated_at.eq(Some(Utc::now())),
             ))
             .get_result(conn)

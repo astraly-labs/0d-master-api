@@ -1,5 +1,5 @@
 [package]
-name = "pragma-bin"
+name = "pragma-kpi"
 version.workspace = true
 edition.workspace = true
 description.workspace = true
@@ -10,15 +10,22 @@ license.workspace = true
 rust-version.workspace = true
 exclude.workspace = true
 
-[dependencies]
-pragma-common.workspace = true
-pragma-db.workspace = true
-pragma-api.workspace = true
-pragma-indexer.workspace = true
-pragma-kpi.workspace = true
+[lints]
+workspace = true
 
+[dependencies]
+pragma-db.workspace = true
+pragma-common.workspace = true
+
+deadpool-diesel.workspace = true
+diesel.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
 anyhow.workspace = true
-clap.workspace = true
-dotenvy.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+async-trait.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

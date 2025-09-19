@@ -48,6 +48,17 @@ pub struct UserTransactionHistory {
     pub next_cursor: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UserKpi {
+    pub as_of: DateTime<Utc>,
+    pub all_time_pnl_usd: String,
+    pub unrealized_pnl_usd: String,
+    pub realized_pnl_usd: String,
+    pub max_drawdown_pct: f64,
+    pub sharpe: f64,
+    pub sortino: f64,
+}
+
 impl From<pragma_db::models::User> for UserProfile {
     fn from(user: pragma_db::models::User) -> Self {
         Self {

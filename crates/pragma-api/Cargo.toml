@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 pragma-db.workspace = true
+pragma-kpi.workspace = true
 pragma-common.workspace = true
 
 async-trait.workspace = true

@@ -2669,6 +2669,7 @@ dependencies = [
  "dotenvy",
  "pragma-common",
  "pragma-db",
+ "pragma-kpi",
  "reqwest",
  "rust_decimal",
  "serde",
@@ -2694,6 +2695,7 @@ dependencies = [
  "pragma-common",
  "pragma-db",
  "pragma-indexer",
+ "pragma-kpi",
  "tokio",
  "tracing",
 ]
@@ -2771,6 +2773,26 @@ dependencies = [
  "serde_json",
  "starknet",
  "task-supervisor",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pragma-kpi"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "deadpool-diesel",
+ "diesel",
+ "pragma-common",
+ "pragma-db",
+ "reqwest",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.16",
  "tokio",
  "tracing",
 ]

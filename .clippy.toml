@@ -21,7 +21,7 @@ allow-print-in-tests = true
 allow-dbg-in-tests = true
 
 # Module and type organization
-msrv = "1.86.0"  # Matching our rust-version
+msrv = "1.89.0"       # Matching our rust-version
 disallowed-names = []
 
 # Performance thresholds
