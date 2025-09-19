@@ -54,7 +54,7 @@ impl SupervisedTask for ExtendedVault {
             tokio::select! {
                 Some(output_event) = event_receiver.recv() => {
                     match output_event {
-                        OutputEvent::Event { header, event } => {
+                        OutputEvent::Event { header, event, tx_hash } => {
                             let (block_number, block_timestamp) =
                             header.map_or_else(|| todo!(), |h| (h.block_number, h.timestamp));
 
@@ -62,7 +62,9 @@ impl SupervisedTask for ExtendedVault {
                                 panic!("[ExtendedVault] ❌ Invalid timestamp for block {block_number}")
                             });
 
-                            if let Err(e) = self.handle_event(block_number, block_timestamp, event).await {
+                            let tx_hash = tx_hash.map(felt_to_hex_str);
+
+                            if let Err(e) = self.handle_event(block_number, block_timestamp, event, tx_hash).await {
                                 self.record_indexer_error(e.to_string()).await?;
                                 return Err(TaskError::from(e));
                             }
@@ -101,14 +103,15 @@ impl ExtendedVault {
         block_number: u64,
         block_timestamp: DateTime<Utc>,
         event: VaultEvent,
+        tx_hash: Option<String>,
     ) -> Result<(), anyhow::Error> {
         match event {
             VaultEvent::Deposit(deposit) => {
-                self.handle_deposit_event(deposit, block_number, block_timestamp)
+                self.handle_deposit_event(deposit, tx_hash, block_number, block_timestamp)
                     .await?;
             }
             VaultEvent::RedeemRequested(redeem) => {
-                self.handle_redeem_requested_event(redeem, block_number, block_timestamp)
+                self.handle_redeem_requested_event(redeem, tx_hash, block_number, block_timestamp)
                     .await?;
             }
             #[allow(clippy::match_same_arms)]
@@ -128,6 +131,7 @@ impl ExtendedVault {
     async fn handle_deposit_event(
         &self,
         deposit: DepositEvent,
+        tx_hash: Option<String>,
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
@@ -144,7 +148,7 @@ impl ExtendedVault {
         };
 
         let new_transaction = NewUserTransaction {
-            tx_hash: String::new(), // TODO: Get from the actual transaction hash
+            tx_hash: tx_hash.unwrap_or_default(),
             block_number: block_number
                 .try_into()
                 .expect("[ExtendedVault] 🌯 Block number too large for i64"),
@@ -208,6 +212,7 @@ impl ExtendedVault {
     async fn handle_redeem_requested_event(
         &self,
         redeem: RedeemRequestedEvent,
+        tx_hash: Option<String>,
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
@@ -225,7 +230,7 @@ impl ExtendedVault {
 
         // Create transaction record for withdrawal
         let new_transaction = NewUserTransaction {
-            tx_hash: String::new(), // TODO: Get from the actual transaction hash
+            tx_hash: tx_hash.unwrap_or_default(),
             block_number: block_number
                 .try_into()
                 .expect("[ExtendedVault] 🌯 Block number too large for i64"),
