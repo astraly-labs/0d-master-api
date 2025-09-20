@@ -6,6 +6,7 @@ use crate::errors::ErrorKind;
 pub mod errors;
 pub mod models;
 pub mod schema;
+pub mod types;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/");
 

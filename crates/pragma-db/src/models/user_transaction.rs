@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use diesel::prelude::*;
+use diesel::{dsl::exists, prelude::*, select};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -109,6 +109,14 @@ impl UserTransaction {
         user_transactions::table
             .filter(user_transactions::tx_hash.eq(tx_hash))
             .first(conn)
+    }
+
+    /// Check if a transaction exists by hash
+    pub fn exists_by_hash(tx_hash: &str, conn: &mut diesel::PgConnection) -> QueryResult<bool> {
+        select(exists(
+            user_transactions::table.filter(user_transactions::tx_hash.eq(tx_hash)),
+        ))
+        .get_result(conn)
     }
 
     /// Find all transactions for a user

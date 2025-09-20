@@ -4,6 +4,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::user_kpis;
+use crate::types::{PerformanceMetric, Timeframe};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = user_kpis)]
@@ -66,6 +67,15 @@ pub struct UserKpiUpdate {
 }
 
 impl UserKpi {
+    /// Get the value for a specific performance metric
+    pub const fn get_metric_value(&self, metric: &PerformanceMetric) -> Option<Decimal> {
+        match metric {
+            PerformanceMetric::AllTimePnl => self.all_time_pnl,
+            PerformanceMetric::UnrealizedPnl => self.unrealized_pnl,
+            PerformanceMetric::RealizedPnl => self.realized_pnl,
+        }
+    }
+
     /// Find a KPI record by ID
     pub fn find_by_id(id: i32, conn: &mut diesel::PgConnection) -> QueryResult<Self> {
         user_kpis::table.find(id).first(conn)
@@ -324,5 +334,82 @@ impl UserKpi {
             .filter(user_kpis::total_fees_paid.is_not_null())
             .select(sum(user_kpis::total_fees_paid))
             .first(conn)
+    }
+
+    /// Get historical portfolio values for calculating risk metrics
+    /// Returns a time series of (timestamp, `portfolio_value`) tuples
+    pub fn get_portfolio_history(
+        user_address: &str,
+        vault_id: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<(DateTime<Utc>, Decimal)>> {
+        // Get historical KPI records (portfolio snapshots)
+        let historical_kpis = user_kpis::table
+            .filter(user_kpis::user_address.eq(user_address))
+            .filter(user_kpis::vault_id.eq(vault_id))
+            .filter(user_kpis::calculated_at.is_not_null())
+            .filter(user_kpis::share_price_used.is_not_null())
+            .filter(user_kpis::share_balance.is_not_null())
+            .order(user_kpis::calculated_at.asc())
+            .load::<Self>(conn)?;
+
+        // Convert KPI records to portfolio value time series
+        let portfolio_history = historical_kpis
+            .into_iter()
+            .filter_map(
+                |kpi| match (kpi.calculated_at, kpi.share_price_used, kpi.share_balance) {
+                    (Some(calculated_at), Some(share_price), Some(share_balance)) => {
+                        Some((calculated_at, share_balance * share_price))
+                    }
+                    _ => None,
+                },
+            )
+            .collect();
+
+        Ok(portfolio_history)
+    }
+
+    /// Get historical performance data for a specific metric and timeframe
+    /// Returns time series data for `all_time_pnl`, `unrealized_pnl`, or `realized_pnl`
+    pub fn get_historical_performance(
+        user_address: &str,
+        vault_id: &str,
+        metric: &PerformanceMetric,
+        timeframe: &Timeframe,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<(DateTime<Utc>, Decimal)>> {
+        use chrono::Duration;
+
+        // Calculate date filter based on timeframe
+        let since_date = timeframe
+            .to_days()
+            .map(|days| Utc::now() - Duration::days(days));
+
+        // Build query with optional date filter
+        let mut query = user_kpis::table
+            .filter(user_kpis::user_address.eq(user_address))
+            .filter(user_kpis::vault_id.eq(vault_id))
+            .filter(user_kpis::calculated_at.is_not_null())
+            .into_boxed();
+
+        if let Some(since) = since_date {
+            query = query.filter(user_kpis::calculated_at.ge(since));
+        }
+
+        let historical_kpis = query
+            .order(user_kpis::calculated_at.asc())
+            .load::<Self>(conn)?;
+
+        // Extract the requested metric from KPI records
+        let historical_data = historical_kpis
+            .into_iter()
+            .filter_map(|kpi| {
+                kpi.calculated_at.and_then(|timestamp| {
+                    kpi.get_metric_value(metric).map(|value| (timestamp, value))
+                })
+            })
+            .collect();
+
+        Ok(historical_data)
     }
 }

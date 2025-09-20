@@ -50,7 +50,7 @@ impl Vault {
         vaults::table.filter(vaults::chain.eq(chain)).load(conn)
     }
 
-    pub fn find_active(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
-        vaults::table.filter(vaults::status.eq("active")).load(conn)
+    pub fn find_live(conn: &mut diesel::PgConnection) -> QueryResult<Vec<Self>> {
+        vaults::table.filter(vaults::status.eq("live")).load(conn)
     }
 }

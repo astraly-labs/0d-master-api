@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use chrono::{DateTime, Utc};
-use deadpool_diesel::postgres::Pool;
 use evian::contracts::starknet::vault::data::indexer::events::{
     DepositEvent, RedeemRequestedEvent, VaultAddress, VaultEvent,
 };
@@ -9,45 +8,51 @@ use evian::{
     contracts::starknet::vault::StarknetVaultIndexer, utils::indexer::handler::OutputEvent,
 };
 use pragma_db::models::{
-    indexer_state::{IndexerState, IndexerStatus},
     user::User,
     user_position::{NewUserPosition, UserPosition, UserPositionUpdate},
     user_transaction::{NewUserTransaction, TransactionStatus, TransactionType, UserTransaction},
+    vault::Vault,
 };
 use rust_decimal::Decimal;
 use starknet::core::types::Felt;
 use task_supervisor::{SupervisedTask, TaskError};
 
 use crate::vaults::helpers::felt_to_hex_str;
+use crate::vaults::state::VaultState;
 
 #[derive(Clone)]
 pub struct ExtendedVault {
-    pub current_block: u64,
-    pub current_timestamp: Option<DateTime<Utc>>,
     pub apibara_api_key: String,
     pub vault_address: Felt,
-    pub db_pool: Pool,
+    pub state: VaultState,
 }
 
 #[async_trait::async_trait]
 impl SupervisedTask for ExtendedVault {
     async fn run(&mut self) -> Result<(), TaskError> {
+        // Validate that the vault exists before starting
+        self.vault_exists().await?;
+
         // Load the last processed block from the database
-        self.load_last_processed_block().await?;
+        self.state
+            .load_last_processed_block(Self::vault_id())
+            .await?;
 
         let vault_indexer = StarknetVaultIndexer::new(
             self.apibara_api_key.clone(),
             HashSet::from([VaultAddress(self.vault_address)]),
-            self.current_block,
+            self.state.current_block,
         );
 
         // Initialize indexer state with starting block
-        self.initialize_indexer_state().await?;
+        self.state
+            .initialize_indexer_state(Self::vault_id())
+            .await?;
 
         let (mut event_receiver, mut vault_handle) = vault_indexer.start().await?;
         tracing::info!(
-            "[Indexer] 🔌 Connected to the on-chain Extended-Vault! (from block {})",
-            self.current_block
+            "[ExtendedVault] 🔌 Connected to the on-chain Vault! (from block {})",
+            self.state.current_block
         );
 
         loop {
@@ -62,20 +67,20 @@ impl SupervisedTask for ExtendedVault {
                                 panic!("[ExtendedVault] ❌ Invalid timestamp for block {block_number}")
                             });
 
-                            let tx_hash = tx_hash.map(felt_to_hex_str);
+                            let tx_hash = tx_hash.map(felt_to_hex_str).expect("[ExtendedVault] ❌ Invalid transaction hash");
 
                             if let Err(e) = self.handle_event(block_number, block_timestamp, event, tx_hash).await {
-                                self.record_indexer_error(e.to_string()).await?;
+                                self.state.record_indexer_state_error(Self::vault_id(), e.to_string()).await?;
                                 return Err(TaskError::from(e));
                             }
 
                             // Update indexer state
-                            self.current_block = block_number;
-                            self.current_timestamp = Some(block_timestamp);
-                            self.update_indexer_state(block_number, block_timestamp).await?;
+                            self.state.current_block = block_number;
+                            self.state.current_timestamp = Some(block_timestamp);
+                            self.state.update_indexer_state(Self::vault_id(), block_number, block_timestamp).await?;
                         }
                         OutputEvent::Synced => {
-                            tracing::info!("[🔢 Accounting] 🥳 Extended Vault indexer reached the tip of the chain!");
+                            tracing::info!("[ExtendedVault] 🥳 Indexer reached the tip of the chain!");
                             // TODO: Should we flag as synced?
                         }
                         // NOTE: Never happens for now. See later when apibara upgrades?
@@ -84,7 +89,7 @@ impl SupervisedTask for ExtendedVault {
                 }
                 res = &mut vault_handle => {
                     let error_msg = format!("😱 Vault indexer stopped: {res:?}");
-                    self.record_indexer_error(error_msg.clone()).await?;
+                    self.state.record_indexer_state_error(Self::vault_id(), error_msg.clone()).await?;
                     anyhow::bail!("{error_msg}");
                 }
             }
@@ -103,7 +108,7 @@ impl ExtendedVault {
         block_number: u64,
         block_timestamp: DateTime<Utc>,
         event: VaultEvent,
-        tx_hash: Option<String>,
+        tx_hash: String,
     ) -> Result<(), anyhow::Error> {
         match event {
             VaultEvent::Deposit(deposit) => {
@@ -131,11 +136,11 @@ impl ExtendedVault {
     async fn handle_deposit_event(
         &self,
         deposit: DepositEvent,
-        tx_hash: Option<String>,
+        tx_hash: String,
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
-        tracing::info!("💰 Handling deposit event: {deposit:?}");
+        //tracing::info!("[ExtendedVault] 💰 Handling deposit event with hash: {tx_hash}");
 
         let user_address = felt_to_hex_str(deposit.owner);
         self.ensure_user_exists(user_address.clone()).await?;
@@ -147,8 +152,32 @@ impl ExtendedVault {
             None
         };
 
+        tracing::info!(
+            "[ExtendedVault] 💰 Deposit event with hash: {tx_hash} [share_price: {share_price:?}]"
+        );
+
+        // Check if transaction already exists to avoid duplicates
+        let conn = self.state.db_pool.get().await?;
+        let tx_exists = conn
+            .interact({
+                let tx_hash_check = tx_hash.clone();
+                move |conn| UserTransaction::exists_by_hash(&tx_hash_check, conn)
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?
+            .map_err(anyhow::Error::from)?;
+
+        if tx_exists {
+            tracing::info!(
+                "[ExtendedVault] ⏭️  Skipping duplicate deposit transaction: {} (block: {})",
+                tx_hash,
+                block_number
+            );
+            return Ok(());
+        }
+
         let new_transaction = NewUserTransaction {
-            tx_hash: tx_hash.unwrap_or_default(),
+            tx_hash,
             block_number: block_number
                 .try_into()
                 .expect("[ExtendedVault] 🌯 Block number too large for i64"),
@@ -164,13 +193,13 @@ impl ExtendedVault {
             metadata: None,
         };
 
-        let conn = self.db_pool.get().await?;
+        let conn = self.state.db_pool.get().await?;
         conn.interact(move |conn| UserTransaction::create(&new_transaction, conn))
             .await
             .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Transaction creation failed: {e}"))?
             .map_err(anyhow::Error::from)?;
 
-        let conn = self.db_pool.get().await?;
+        let conn = self.state.db_pool.get().await?;
         conn.interact(move |conn| {
             match UserPosition::find_by_user_and_vault(&user_address, Self::vault_id(), conn) {
                 Ok(position) => {
@@ -212,11 +241,11 @@ impl ExtendedVault {
     async fn handle_redeem_requested_event(
         &self,
         redeem: RedeemRequestedEvent,
-        tx_hash: Option<String>,
+        tx_hash: String,
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
-        tracing::info!("💸 Handling redeem requested event: {redeem:?}");
+        tracing::info!("[ExtendedVault] 💸 Handling redeem requested event with hash: {tx_hash}");
 
         let user_address = felt_to_hex_str(redeem.owner);
         self.ensure_user_exists(user_address.clone()).await?;
@@ -228,9 +257,29 @@ impl ExtendedVault {
             None
         };
 
+        // Check if transaction already exists to avoid duplicates
+        let conn = self.state.db_pool.get().await?;
+        let tx_exists = conn
+            .interact({
+                let tx_hash_check = tx_hash.clone();
+                move |conn| UserTransaction::exists_by_hash(&tx_hash_check, conn)
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?
+            .map_err(anyhow::Error::from)?;
+
+        if tx_exists {
+            tracing::info!(
+                "[ExtendedVault] ⏭️  Skipping duplicate withdraw transaction: {} (block: {})",
+                tx_hash,
+                block_number
+            );
+            return Ok(());
+        }
+
         // Create transaction record for withdrawal
         let new_transaction = NewUserTransaction {
-            tx_hash: tx_hash.unwrap_or_default(),
+            tx_hash,
             block_number: block_number
                 .try_into()
                 .expect("[ExtendedVault] 🌯 Block number too large for i64"),
@@ -238,7 +287,7 @@ impl ExtendedVault {
             user_address: user_address.clone(),
             vault_id: Self::vault_id().to_string(),
             type_: TransactionType::Withdraw.as_str().to_string(),
-            status: TransactionStatus::Pending.as_str().to_string(), // TODO: Change to Confirmed when the redeem is completed?
+            status: TransactionStatus::Confirmed.as_str().to_string(), // TODO: Change to Confirmed only when the redeem is completed?
             amount: redeem.assets,
             shares_amount: Some(redeem.shares),
             share_price,
@@ -251,14 +300,14 @@ impl ExtendedVault {
         };
 
         // First database operation: Create transaction record
-        let conn = self.db_pool.get().await?;
+        let conn = self.state.db_pool.get().await?;
         conn.interact(move |conn| UserTransaction::create(&new_transaction, conn))
             .await
             .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Transaction creation failed: {e}"))?
             .map_err(anyhow::Error::from)?;
 
         // Second database operation: Update user position
-        let conn = self.db_pool.get().await?;
+        let conn = self.state.db_pool.get().await?;
         conn.interact(move |conn| {
             match UserPosition::find_by_user_and_vault(&user_address, Self::vault_id(), conn) {
                 Ok(position) => {
@@ -299,131 +348,47 @@ impl ExtendedVault {
         Ok(())
     }
 
+    /// Validate that the vault exists in the database before starting indexer
+    async fn vault_exists(&self) -> Result<(), anyhow::Error> {
+        let vault_id = Self::vault_id().to_string();
+        let conn = self.state.db_pool.get().await?;
+
+        let result = conn
+            .interact(move |conn| Vault::find_by_id(&vault_id, conn))
+            .await
+            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?;
+
+        match result {
+            Ok(vault) => {
+                tracing::info!(
+                    "[ExtendedVault] 🔎 Vault exists in database with name({}) and id({})",
+                    vault.name,
+                    vault.id
+                );
+                Ok(())
+            }
+            Err(diesel::result::Error::NotFound) => {
+                anyhow::bail!(
+                    "[ExtendedVault] ❌ Vault with ID '{}' not found in database.\n\
+                    To fix this error, create the vault record in the database.",
+                    Self::vault_id()
+                );
+            }
+            Err(e) => {
+                anyhow::bail!("[ExtendedVault] 🗃️ Database error while checking vault: {e}");
+            }
+        }
+    }
+
     /// Ensure user exists in database
     async fn ensure_user_exists(&self, user_address: String) -> Result<(), anyhow::Error> {
-        let conn = self.db_pool.get().await?;
+        let conn = self.state.db_pool.get().await?;
 
         conn.interact(move |conn| {
             User::find_or_create(&user_address, pragma_common::web3::Chain::Starknet, conn)
         })
         .await
         .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?
-        .map_err(anyhow::Error::from)?;
-
-        Ok(())
-    }
-
-    /// Load the last processed block from the database
-    pub async fn load_last_processed_block(&mut self) -> Result<(), anyhow::Error> {
-        let conn = self.db_pool.get().await?;
-
-        let result = conn
-            .interact(move |conn| IndexerState::find_by_vault_id(Self::vault_id(), conn))
-            .await
-            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?;
-
-        match result {
-            Ok(state) => {
-                // Resume from the last processed block + 1
-                self.current_block = (state.last_processed_block + 1) as u64;
-                tracing::info!(
-                    "[ExtendedVault] 📍 Resuming from block {} (last processed: {})",
-                    self.current_block,
-                    state.last_processed_block
-                );
-            }
-            Err(diesel::result::Error::NotFound) => {
-                // No previous state found, start from the configured block
-                tracing::info!(
-                    "[ExtendedVault] 🆕 No previous state found, starting from block {}",
-                    self.current_block
-                );
-            }
-            Err(e) => return Err(anyhow::Error::from(e)),
-        }
-
-        Ok(())
-    }
-
-    /// Initialize indexer state with the starting block
-    async fn initialize_indexer_state(&self) -> Result<(), anyhow::Error> {
-        let current_block = self.current_block;
-        let conn = self.db_pool.get().await?;
-
-        conn.interact(move |conn| {
-            IndexerState::upsert_for_vault(
-                Self::vault_id(),
-                current_block
-                    .try_into()
-                    .expect("[ExtendedVault] 🌯 Block number too large for i64"),
-                None, // No timestamp for initialization
-                Some(IndexerStatus::Active),
-                conn,
-            )
-        })
-        .await
-        .map_err(|e| {
-            anyhow::anyhow!("[ExtendedVault] 🗃️ Indexer state initialization failed: {e}")
-        })?
-        .map_err(anyhow::Error::from)?;
-
-        Ok(())
-    }
-
-    /// Update indexer state with the last processed block
-    async fn update_indexer_state(
-        &self,
-        block_number: u64,
-        block_timestamp: DateTime<Utc>,
-    ) -> Result<(), anyhow::Error> {
-        let conn = self.db_pool.get().await?;
-
-        conn.interact(move |conn| {
-            IndexerState::upsert_for_vault(
-                Self::vault_id(),
-                block_number
-                    .try_into()
-                    .expect("[ExtendedVault] 🌯 Block number too large for i64"),
-                Some(block_timestamp),
-                Some(IndexerStatus::Active),
-                conn,
-            )
-        })
-        .await
-        .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Indexer state update failed: {e}"))?
-        .map_err(anyhow::Error::from)?;
-
-        Ok(())
-    }
-
-    /// Record an error in the indexer state
-    async fn record_indexer_error(&self, error_message: String) -> Result<(), anyhow::Error> {
-        let conn = self.db_pool.get().await?;
-
-        let current_block = self.current_block;
-        let current_timestamp = self.current_timestamp;
-        conn.interact(move |conn| {
-            match IndexerState::find_by_vault_id(Self::vault_id(), conn) {
-                Ok(state) => state.record_error(error_message, conn).map(|_| ()),
-                Err(diesel::result::Error::NotFound) => {
-                    // Create new state with error
-                    let new_state = pragma_db::models::indexer_state::NewIndexerState {
-                        vault_id: Self::vault_id().to_string(),
-                        last_processed_block: current_block
-                            .try_into()
-                            .expect("[ExtendedVault] 🌯 Block number too large for i64"),
-                        last_processed_timestamp: current_timestamp,
-                        last_error: Some(error_message),
-                        last_error_at: Some(Utc::now()),
-                        status: Some(IndexerStatus::Error.as_str().to_string()),
-                    };
-                    IndexerState::create(&new_state, conn).map(|_| ())
-                }
-                Err(e) => Err(e),
-            }
-        })
-        .await
-        .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Error recording failed: {e}"))?
         .map_err(anyhow::Error::from)?;
 
         Ok(())

@@ -23,9 +23,12 @@ impl KpiService {
     }
 
     pub async fn run_forever(&self) -> Result<()> {
+        // TODO: Wait for the indexer to be fully synced (or fixed hour run)
+        tokio::time::sleep(Duration::from_secs(20)).await;
+
         loop {
             if let Err(e) = self.run_daily_kpi_calculations().await {
-                tracing::error!("Error in daily KPI calculation cycle: {e}");
+                tracing::error!("[KpiService] 🔴 Error in daily KPI calculation cycle: {e}");
             }
 
             // Sleep before next run (24 hours)
@@ -34,7 +37,7 @@ impl KpiService {
     }
 
     pub async fn run_daily_kpi_calculations(&self) -> Result<()> {
-        tracing::info!("🧮 Starting daily KPI calculations...");
+        tracing::info!("[KpiService] 🧮 Starting daily KPI calculations...");
         let start_time = Utc::now();
 
         // Get all active vaults
@@ -48,7 +51,12 @@ impl KpiService {
                 Ok(updates) => {
                     total_updates += updates;
                 }
-                Err(_) => {
+                Err(e) => {
+                    tracing::error!(
+                        "[KpiService] 🔴 Failed to calculate daily KPIs for vault {}: {}",
+                        vault.id,
+                        e
+                    );
                     total_errors += 1;
                 }
             }
@@ -56,7 +64,7 @@ impl KpiService {
 
         let duration = Utc::now() - start_time;
         tracing::info!(
-            "🧮 Daily KPI calculation completed in {}s. Updates: {}, Errors: {}",
+            "[KpiService] 🧮 Daily KPI calculation completed in {}s. Updates: {}, Errors: {}",
             duration.num_seconds(),
             total_updates,
             total_errors
@@ -83,7 +91,7 @@ impl KpiService {
                 Ok(()) => updated_count += 1,
                 Err(e) => {
                     tracing::error!(
-                        "Failed to calculate daily KPIs for user {} in vault {}: {:?}",
+                        "[KpiService] 🔴 Failed to calculate daily KPIs for user {} in vault {}: {:?}",
                         position.user_address,
                         vault.id,
                         e
@@ -166,40 +174,15 @@ impl KpiService {
         let user_address_clone = user_address.to_string();
         let vault_id_clone = vault_id.to_string();
 
-        // Get historical KPI records (portfolio snapshots)
-        let historical_kpis = conn
+        // Get historical portfolio data from model
+        let mut portfolio_history = conn
             .interact(move |conn| {
-                use diesel::prelude::*;
-                use pragma_db::schema::user_kpis::dsl::{
-                    calculated_at, share_balance, share_price_used, user_address, user_kpis,
-                    vault_id,
-                };
-
-                user_kpis
-                    .filter(user_address.eq(&user_address_clone))
-                    .filter(vault_id.eq(&vault_id_clone))
-                    .filter(calculated_at.is_not_null())
-                    .filter(share_price_used.is_not_null())
-                    .filter(share_balance.is_not_null())
-                    .order(calculated_at.asc())
-                    .load::<UserKpi>(conn)
+                UserKpi::get_portfolio_history(&user_address_clone, &vault_id_clone, conn)
             })
             .await
-            .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
-
-        // Convert KPI records to portfolio value time series
-        let mut portfolio_history = Vec::new();
-
-        for kpi in historical_kpis {
-            if let (Some(calculated_at), Some(share_price), Some(historical_share_balance)) =
-                (kpi.calculated_at, kpi.share_price_used, kpi.share_balance)
-            {
-                // Calculate portfolio value: historical_share_balance * share_price_at_time
-                let portfolio_value = historical_share_balance * share_price;
-
-                portfolio_history.push((calculated_at, portfolio_value));
-            }
-        }
+            .map_err(|e| {
+                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
+            })??;
 
         // Add current portfolio value if we have historical data
         if !portfolio_history.is_empty() {
@@ -240,12 +223,7 @@ impl KpiService {
         let conn = self.db_pool.get().await?;
 
         let vaults = conn
-            .interact(|conn| {
-                use diesel::prelude::*;
-                use pragma_db::schema::vaults::dsl::{status, vaults};
-
-                vaults.filter(status.eq("live")).load::<Vault>(conn)
-            })
+            .interact(Vault::find_live)
             .await
             .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
 
@@ -258,17 +236,7 @@ impl KpiService {
         let vault_id_clone = vault_id.to_string();
 
         let positions = conn
-            .interact(move |conn| {
-                use diesel::prelude::*;
-                use pragma_db::schema::user_positions::dsl::{
-                    share_balance, user_positions, vault_id,
-                };
-
-                user_positions
-                    .filter(vault_id.eq(&vault_id_clone))
-                    .filter(share_balance.gt(Decimal::ZERO))
-                    .load::<UserPosition>(conn)
-            })
+            .interact(move |conn| UserPosition::find_active_by_vault(&vault_id_clone, conn))
             .await
             .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
 
@@ -294,31 +262,11 @@ impl KpiService {
                 )
             })
             .await
-            .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
+            .map_err(|e| {
+                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
+            })??;
 
         Ok(transactions)
-    }
-
-    /// Fetch current share price from vault API
-    async fn fetch_vault_share_price(vault: &Vault) -> Result<Decimal> {
-        let client = reqwest::Client::new();
-
-        // Make request to vault API endpoint
-        let response = client.get(&vault.api_endpoint).send().await?;
-
-        let vault_data: serde_json::Value = response.json().await?;
-
-        // Extract share price (assuming it's in a standard field)
-        let share_price_str = vault_data
-            .get("current_share_price")
-            .or_else(|| vault_data.get("share_price"))
-            .or_else(|| vault_data.get("nav_per_share"))
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Share price not found in vault API response"))?;
-
-        let share_price = share_price_str.parse::<Decimal>()?;
-
-        Ok(share_price)
     }
 
     /// Insert new daily user KPI record (creates historical records for portfolio analysis)
@@ -334,9 +282,6 @@ impl KpiService {
         let kpi_data = kpi_data.clone();
 
         conn.interact(move |conn| {
-            use diesel::prelude::*;
-            use pragma_db::schema::user_kpis;
-
             let new_kpi = NewUserKpi {
                 user_address,
                 vault_id,
@@ -354,12 +299,10 @@ impl KpiService {
                 share_balance: kpi_data.share_balance,
             };
 
-            diesel::insert_into(user_kpis::table)
-                .values(&new_kpi)
-                .execute(conn)
+            UserKpi::create(&new_kpi, conn)
         })
         .await
-        .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
+        .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e))??;
 
         Ok(())
     }
@@ -367,16 +310,46 @@ impl KpiService {
     /// Get user position
     async fn get_user_position(&self, user_address: &str, vault_id: &str) -> Result<UserPosition> {
         let conn = self.db_pool.get().await?;
-        let user_address = user_address.to_string();
-        let vault_id = vault_id.to_string();
+        let user_address_clone = user_address.to_string();
+        let vault_id_clone = vault_id.to_string();
 
         let position = conn
             .interact(move |conn| {
-                UserPosition::find_by_user_and_vault(&user_address, &vault_id, conn)
+                UserPosition::find_by_user_and_vault(&user_address_clone, &vault_id_clone, conn)
             })
             .await
-            .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
+            .map_err(|e| {
+                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
+            })??;
 
         Ok(position)
+    }
+
+    /// Fetch vault share price and convert to Decimal
+    async fn fetch_vault_share_price(vault: &Vault) -> Result<Decimal> {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()?;
+
+        let url = format!("{}/nav/latest", vault.api_endpoint.trim_end_matches('/'));
+        let response = client.get(&url).send().await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "[KpiService] 🔴 Vault API returned status: {}",
+                response.status(),
+            ));
+        }
+
+        let nav_data: serde_json::Value = response.json().await?;
+        let share_price_str = nav_data
+            .get("share_price")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                anyhow::anyhow!("[KpiService] 🔴 Share price not found in vault API response")
+            })?;
+
+        let share_price = share_price_str.parse::<Decimal>()?;
+        Ok(share_price)
     }
 }

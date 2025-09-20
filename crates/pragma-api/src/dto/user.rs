@@ -4,6 +4,8 @@ use utoipa::ToSchema;
 
 use pragma_db::models::user_transaction::{TransactionStatus, TransactionType};
 
+pub use pragma_db::types::{PerformanceMetric, Timeframe};
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum DisplayCurrency {
@@ -57,6 +59,19 @@ pub struct UserKpi {
     pub max_drawdown_pct: f64,
     pub sharpe: f64,
     pub sortino: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct HistoricalDataPoint {
+    pub t: DateTime<Utc>,
+    pub v: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct HistoricalUserPerformance {
+    pub metric: PerformanceMetric,
+    pub timeframe: Timeframe,
+    pub points: Vec<HistoricalDataPoint>,
 }
 
 impl From<pragma_db::models::User> for UserProfile {
