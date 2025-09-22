@@ -4,12 +4,7 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::{
-    AppState,
-    dto::UserPositionSummary,
-    errors::ApiError,
-    helpers::{fetch_vault_share_price, http_client},
-};
+use crate::{AppState, dto::UserPositionSummary, errors::ApiError, helpers::VaultMasterAPIClient};
 use chrono::Utc;
 use pragma_db::models::{UserPosition, UserTransaction, Vault};
 use rust_decimal::Decimal;
@@ -79,12 +74,17 @@ pub async fn get_user_position_summary(
         })?;
 
     // Fetch current share price from vault API
-    let client = http_client()?;
-    let share_price_str = fetch_vault_share_price(&client, &vault.api_endpoint)
-        .await
-        .unwrap_or_else(|| "0".to_string());
+    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let info = client.get_vault_share_price().await.map_err(|e| {
+        tracing::error!("Failed to fetch vault share price: {}", e);
+        ApiError::InternalServerError
+    })?;
+    let share_price_str = info.share_price_in_usd;
 
-    let share_price = share_price_str.parse::<Decimal>().unwrap_or_default();
+    let share_price = share_price_str.parse::<Decimal>().map_err(|e| {
+        tracing::error!("Failed to parse share price '{share_price_str}': {e}");
+        ApiError::InternalServerError
+    })?;
 
     // Calculate total deposits using database query
     let address_for_deposits = address.clone();

@@ -4,12 +4,7 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::{
-    AppState,
-    dto::VaultStats,
-    errors::ApiError,
-    helpers::{fetch_vault_portfolio, fraction_str_to_pct_opt, http_client},
-};
+use crate::{AppState, dto::VaultStats, errors::ApiError, helpers::VaultMasterAPIClient};
 use pragma_db::models::Vault;
 
 #[utoipa::path(
@@ -53,18 +48,15 @@ pub async fn get_vault_stats(
         })?;
 
     // Call the vault's portfolio/stats endpoint via helper
-    let client = http_client()?;
-    let portfolio = fetch_vault_portfolio(&client, &vault.api_endpoint).await;
-    let tvl = portfolio
-        .as_ref()
-        .map_or_else(|| "0".to_string(), |p| p.tvl_in_usd.clone());
-    let apr = portfolio
-        .as_ref()
-        .and_then(|p| fraction_str_to_pct_opt(&p.last_30d_apr))
-        .unwrap_or(0.0);
+    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let stats = client.get_vault_stats().await.map_err(|e| {
+        tracing::error!("Failed to fetch vault stats: {}", e);
+        ApiError::InternalServerError
+    })?;
 
+    // TODO: use the DTO directly
     Ok(Json(VaultStats {
-        tvl,
-        past_month_apr_pct: apr,
+        tvl: stats.tvl,
+        past_month_apr_pct: stats.past_month_apr_pct,
     }))
 }
