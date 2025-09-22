@@ -151,6 +151,7 @@ diesel::table! {
         api_endpoint -> Varchar,
         created_at -> Nullable<Timestamptz>,
         updated_at -> Nullable<Timestamptz>,
+        start_block -> Int8,
     }
 }
 

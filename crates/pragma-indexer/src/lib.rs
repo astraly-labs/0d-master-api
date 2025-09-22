@@ -2,6 +2,7 @@ pub mod task;
 pub mod vaults;
 
 use deadpool_diesel::postgres::Pool;
+use pragma_db::models::Vault;
 use starknet::core::types::Felt;
 use std::time::Duration;
 use task_supervisor::SupervisorBuilder;
@@ -10,43 +11,48 @@ use crate::vaults::{extended::ExtendedVault, state::VaultState};
 
 pub struct IndexerService {
     db_pool: Pool,
-    extended_vault_adress: String,
-    extended_vault_start_block: u64,
     apibara_api_key: String,
 }
 
 impl IndexerService {
-    pub const fn new(
-        db_pool: Pool,
-        extended_vault_adress: String,
-        extended_vault_start_block: u64,
-        apibara_api_key: String,
-    ) -> Self {
+    pub const fn new(db_pool: Pool, apibara_api_key: String) -> Self {
         Self {
             db_pool,
-            extended_vault_adress,
-            extended_vault_start_block,
             apibara_api_key,
         }
     }
 
     pub async fn run_forever(&self) -> anyhow::Result<()> {
-        let supervisor = SupervisorBuilder::default()
+        let mut supervisor = SupervisorBuilder::default()
             .with_dead_tasks_threshold(Some(0.00)) // if any task is dead, stop the supervisor
             .with_base_restart_delay(Duration::from_millis(500))
             .with_max_restart_attempts(5)
             .with_task_being_stable_after(Duration::from_secs(120))
-            .with_health_check_interval(Duration::from_secs(5))
-            // VAULTS TASKS
-            .with_task(
-                ExtendedVault::vault_id(),
+            .with_health_check_interval(Duration::from_secs(5));
+
+        let conn = self
+            .db_pool
+            .get()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))
+            .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?;
+
+        let vaults = conn
+            .interact(Vault::find_all)
+            .await
+            .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
+
+        for vault in vaults {
+            supervisor = supervisor.with_task(
+                &vault.id,
                 ExtendedVault {
-                    vault_address: Felt::from_hex(&self.extended_vault_adress)
-                        .expect("Invalid vault address"),
+                    vault_id: vault.id.clone(),
+                    vault_address: Felt::from_hex(&vault.contract_address).unwrap(),
                     apibara_api_key: self.apibara_api_key.clone(),
-                    state: VaultState::new(self.extended_vault_start_block, self.db_pool.clone()),
+                    state: VaultState::new(vault.start_block as u64, self.db_pool.clone()),
                 },
             );
+        }
 
         let supervisor_handle = supervisor.build().run();
 

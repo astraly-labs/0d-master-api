@@ -35,6 +35,7 @@ pub struct Vault {
     pub api_endpoint: String,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub start_block: i64,
 }
 
 impl Vault {
