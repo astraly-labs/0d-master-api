@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile-upstream:master
 
-FROM lukemathwalker/cargo-chef:latest-rust-slim-bullseye AS cargo-chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.89.0-slim-bullseye AS cargo-chef
 WORKDIR /app
 
 FROM cargo-chef AS planner
