@@ -13,8 +13,21 @@ pub enum ApiError {
     Unauthorized(String),
     #[error("Not found: {0}")]
     NotFound(String),
+    #[error("Bad request: {0}")]
+    BadRequest(String),
     #[error("Internal server error")]
     InternalServerError,
+}
+
+impl From<pragma_master::MasterApiError> for ApiError {
+    fn from(err: pragma_master::MasterApiError) -> Self {
+        match err {
+            pragma_master::MasterApiError::InternalServerError
+            | pragma_master::MasterApiError::HttpError(_)
+            | pragma_master::MasterApiError::JsonError(_)
+            | pragma_master::MasterApiError::AnyhowError(_) => Self::InternalServerError,
+        }
+    }
 }
 
 impl IntoResponse for ApiError {
@@ -24,6 +37,7 @@ impl IntoResponse for ApiError {
             Self::DbError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
             Self::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, msg),
             Self::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             Self::InternalServerError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),

@@ -1,3 +1,5 @@
+#![allow(clippy::needless_for_each)]
+
 use anyhow::Result;
 use serde_json::to_string_pretty;
 use std::path::PathBuf;
@@ -29,6 +31,7 @@ impl Modify for ServerAddon {
     modifiers(&ServerAddon),
     tags(
         (name = "pragma-bin", description = "0d, master api"),
+        (name = "User", description = "User profile endpoints"),
         (name = "Vaults", description = "Vault management endpoints")
     )
 )]

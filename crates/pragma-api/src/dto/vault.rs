@@ -69,9 +69,44 @@ pub struct Icons {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct VaultStats {
-    pub tvl: String,
-    pub past_month_apr_pct: f64,
+#[serde(rename_all = "lowercase")]
+pub enum TimeseriesMetric {
+    Tvl,
+    Pnl,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub enum TimeseriesCurrency {
+    #[serde(rename = "USD")]
+    Usd,
+    #[serde(rename = "USDC")]
+    Usdc,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct LiquiditySimulateRequest {
+    pub amount: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultInfoDTO {
+    /// Current epoch number
+    pub current_epoch: String,
+
+    /// The underlying currency ticker (e.g., "USDC", "USDT")
+    pub underlying_currency: String,
+
+    /// Total assets required for pending withdrawals (sum of all epochs)
+    pub pending_withdrawals_assets: String,
+
+    /// Assets under management (AUM) in underlying currency
+    pub aum: String,
+
+    /// Current buffer amount in underlying currency
+    pub buffer: String,
+
+    /// Current share price in USD
+    pub share_price_in_usd: String,
 }
 
 impl From<pragma_db::models::Vault> for Vault {

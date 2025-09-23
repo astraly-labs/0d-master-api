@@ -1,0 +1,31 @@
+[package]
+name = "pragma-indexer"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
+rust-version.workspace = true
+exclude.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pragma-common.workspace = true
+pragma-db.workspace = true
+
+evian.workspace = true
+anyhow.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+deadpool-diesel.workspace = true
+diesel.workspace = true
+starknet.workspace = true
+task-supervisor.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+serde_json.workspace = true
+rust_decimal.workspace = true

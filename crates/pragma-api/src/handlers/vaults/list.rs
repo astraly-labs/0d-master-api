@@ -4,9 +4,10 @@ use crate::{
     AppState,
     dto::{VaultListItem, VaultListResponse},
     errors::ApiError,
-    helpers::{fetch_vault_portfolio, http_client, map_status},
+    helpers::map_status,
 };
 use pragma_db::models::Vault;
+use pragma_master::VaultMasterAPIClient;
 use reqwest::StatusCode as HttpStatusCode;
 
 #[utoipa::path(
@@ -38,17 +39,16 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
 
     // For non-metadata fields (e.g., TVL), query each vault's API endpoint.
     // Keep this resilient: on any failure, default TVL to "0" and continue.
-    let client = http_client()?;
 
     let mut items = Vec::with_capacity(vaults.len());
     for vault in vaults {
-        let stats_url = format!("{}/portfolio", vault.api_endpoint.trim_end_matches('/'));
+        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
 
-        let tvl = if let Some(p) = fetch_vault_portfolio(&client, &vault.api_endpoint).await {
-            p.tvl_in_usd
+        let tvl = if let Ok(p) = client.get_vault_stats().await {
+            p.tvl
         } else {
             let code: Option<HttpStatusCode> = None;
-            tracing::warn!(vault_id = %vault.id, url = %stats_url, status = ?code, "Failed to fetch vault stats");
+            tracing::warn!(vault_id = %vault.id, status = ?code, "Failed to fetch vault stats");
             "0".to_string()
         };
 

@@ -1,7 +1,7 @@
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.86.0"
+rust-version = "1.89.0"
 description = "0D Master API for vaults"
 homepage = "https://pragma.build"
 readme = "./README.md"
@@ -16,6 +16,9 @@ members = [
     # Crates
     "crates/pragma-api",
     "crates/pragma-db",
+    "crates/pragma-indexer",
+    "crates/pragma-kpi",
+    "crates/pragma-master",
 ]
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -66,6 +69,9 @@ large_stack_arrays = "allow"
 # Local crates
 pragma-api = { path = "crates/pragma-api", default-features = false }
 pragma-db = { path = "crates/pragma-db", default-features = false }
+pragma-indexer = { path = "crates/pragma-indexer", default-features = false }
+pragma-kpi = { path = "crates/pragma-kpi", default-features = false }
+pragma-master = { path = "crates/pragma-master", default-features = false }
 
 # Pragma crates
 pragma-common = { version = "0.4.1", features = [
@@ -73,6 +79,12 @@ pragma-common = { version = "0.4.1", features = [
     "serde",
     "utoipa",
     "services",
+] }
+evian = { version = "0.1.95", registry = "pragma", features = [
+    "pragma_oracle",
+    "starknet_erc4626",
+    "starknet_erc20",
+    "starknet_vault",
 ] }
 
 async-trait = "0.1"
@@ -93,8 +105,19 @@ tower-http = { version = "0.5.2", features = ["fs", "trace", "cors"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.4", features = ["fast-rng", "v4", "serde"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+starknet = "0.17.0"
+task-supervisor = { version = "0.3.3", features = ["with_tracing"] }
+bigdecimal = { version = "0.4.8", features = ["serde"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
 tower_governor = { version = "0.8.0", features = ["axum", "tracing"] }
+rust_decimal = { version = "1.35", features = [
+    "db-diesel-postgres",
+    "serde",
+    "maths",
+] }
 
 # OpenAPI
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
@@ -112,4 +135,3 @@ diesel = { version = "2.1", features = [
 diesel-async = { version = "0.4.1", features = ["postgres"] }
 diesel_migrations = "2"
 deadpool-diesel = { version = "0.4", features = ["postgres"] }
-bigdecimal = { version = "0.4", features = ["serde"] }

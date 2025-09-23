@@ -15,6 +15,8 @@ workspace = true
 
 [dependencies]
 pragma-db.workspace = true
+pragma-kpi.workspace = true
+pragma-master.workspace = true
 pragma-common.workspace = true
 
 async-trait.workspace = true
@@ -35,6 +37,7 @@ tracing.workspace = true
 utoipa.workspace = true
 utoipa-swagger-ui.workspace = true
 utoipauto.workspace = true
+rust_decimal.workspace = true
 
 axum-tracing-opentelemetry.workspace = true
 reqwest.workspace = true

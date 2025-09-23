@@ -4,13 +4,10 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::{
-    AppState,
-    dto::VaultStats,
-    errors::ApiError,
-    helpers::{fetch_vault_portfolio, fraction_str_to_pct_opt, http_client},
-};
 use pragma_db::models::Vault;
+use pragma_master::{GetStatsDTO, VaultMasterAPIClient};
+
+use crate::{AppState, errors::ApiError};
 
 #[utoipa::path(
     get,
@@ -20,7 +17,7 @@ use pragma_db::models::Vault;
         ("vault_id" = String, Path, description = "Vault identifier")
     ),
     responses(
-        (status = 200, description = "Vault statistics", body = VaultStats),
+        (status = 200, description = "Vault statistics", body = GetStatsDTO),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
     )
@@ -53,18 +50,11 @@ pub async fn get_vault_stats(
         })?;
 
     // Call the vault's portfolio/stats endpoint via helper
-    let client = http_client()?;
-    let portfolio = fetch_vault_portfolio(&client, &vault.api_endpoint).await;
-    let tvl = portfolio
-        .as_ref()
-        .map_or_else(|| "0".to_string(), |p| p.tvl_in_usd.clone());
-    let apr = portfolio
-        .as_ref()
-        .and_then(|p| fraction_str_to_pct_opt(&p.last_30d_apr))
-        .unwrap_or(0.0);
+    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let vault_stats = client.get_vault_stats().await.map_err(|e| {
+        tracing::error!("Failed to fetch vault stats: {}", e);
+        ApiError::InternalServerError
+    })?;
 
-    Ok(Json(VaultStats {
-        tvl,
-        past_month_apr_pct: apr,
-    }))
+    Ok(Json(vault_stats))
 }

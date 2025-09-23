@@ -14,4 +14,8 @@ pub struct AuthCli {
     /// API port
     #[arg(long, env = "API_PORT", default_value = "8080")]
     pub api_port: u16,
+
+    /// Apibara API key for blockchain indexing
+    #[arg(long, env = "APIBARA_API_KEY")]
+    pub apibara_api_key: String,
 }

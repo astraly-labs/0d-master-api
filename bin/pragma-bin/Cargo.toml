@@ -14,6 +14,8 @@ exclude.workspace = true
 pragma-common.workspace = true
 pragma-db.workspace = true
 pragma-api.workspace = true
+pragma-indexer.workspace = true
+pragma-kpi.workspace = true
 
 anyhow.workspace = true
 clap.workspace = true

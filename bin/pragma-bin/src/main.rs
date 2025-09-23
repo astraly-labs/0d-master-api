@@ -4,11 +4,13 @@ use crate::cli::AuthCli;
 use anyhow::Result;
 use clap::Parser;
 use dotenvy::dotenv;
-use pragma_common::telemetry::init_telemetry;
+use pragma_common::{services::ServiceGroup, telemetry::init_telemetry};
 
 use pragma_api::{ApiService, AppState};
 use pragma_common::services::Service;
 use pragma_db::{init_pool, run_migrations};
+use pragma_indexer::task::IndexerTask;
+use pragma_kpi::KpiTask;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -18,6 +20,7 @@ async fn main() -> Result<()> {
         otel_collector_endpoint,
         database_url,
         api_port,
+        apibara_api_key,
     } = AuthCli::parse();
 
     let app_name = "0d_master_api";
@@ -28,10 +31,20 @@ async fn main() -> Result<()> {
     let pool = init_pool(app_name, &database_url)?;
     run_migrations(&pool).await;
 
-    let app_state = AppState { pool };
+    let app_state = AppState { pool: pool.clone() };
 
     let api_service = ApiService::new(app_state, "0.0.0.0", api_port);
-    api_service.start_and_drive_to_end().await?;
+
+    let indexer_service = IndexerTask::new(pool.clone(), apibara_api_key);
+
+    let kpi_service = KpiTask::new(pool.clone());
+
+    ServiceGroup::default()
+        .with(api_service)
+        .with(indexer_service)
+        .with(kpi_service)
+        .start_and_drive_to_end()
+        .await?;
 
     Ok(())
 }

@@ -53,6 +53,8 @@ diesel::table! {
         share_price_used -> Nullable<Numeric>,
         created_at -> Nullable<Timestamptz>,
         updated_at -> Nullable<Timestamptz>,
+        sortino_ratio -> Nullable<Numeric>,
+        share_balance -> Nullable<Numeric>,
     }
 }
 
@@ -149,6 +151,7 @@ diesel::table! {
         api_endpoint -> Varchar,
         created_at -> Nullable<Timestamptz>,
         updated_at -> Nullable<Timestamptz>,
+        start_block -> Int8,
     }
 }
 
