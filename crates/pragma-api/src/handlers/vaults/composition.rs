@@ -3,40 +3,15 @@ use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
 };
-use serde::Deserialize;
+
+use pragma_db::models::Vault;
+use pragma_master::{CompositionDTO, CompositionSeriesDTO, VaultMasterAPIClient};
 
 use crate::{
     AppState,
-    dto::{
-        VaultCompositionResponse, VaultCompositionSeriesResponse, 
-        CompositionPosition, CompositionSeriesPoint,
-    },
+    dto::{CompositionQuery, CompositionSeriesQuery},
     errors::ApiError,
-    helpers::VaultMasterAPIClient,
 };
-use pragma_db::models::Vault;
-
-#[derive(Debug, Deserialize)]
-pub struct CompositionQuery {
-    #[serde(default = "default_group_by")]
-    group_by: String,
-}
-
-fn default_group_by() -> String {
-    "platform".to_string()
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CompositionSeriesQuery {
-    #[serde(default = "default_timeframe")]
-    timeframe: String,
-    #[serde(default = "default_group_by")]
-    group_by: String,
-}
-
-fn default_timeframe() -> String {
-    "all".to_string()
-}
 
 #[utoipa::path(
     get,
@@ -47,7 +22,7 @@ fn default_timeframe() -> String {
         ("group_by" = String, Query, description = "Aggregate by platform or asset", example = "platform")
     ),
     responses(
-        (status = 200, description = "Current vault composition", body = VaultCompositionResponse),
+        (status = 200, description = "Current vault composition", body = CompositionDTO),
         (status = 400, description = "Invalid parameters"),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
@@ -98,24 +73,7 @@ pub async fn get_vault_composition(
             ApiError::InternalServerError
         })?;
 
-    // Convert the helper DTO to our API response DTO
-    let response = VaultCompositionResponse {
-        as_of: composition.as_of,
-        positions: composition
-            .positions
-            .into_iter()
-            .map(|p| CompositionPosition {
-                platform: p.platform,
-                asset: p.asset,
-                symbol: p.symbol,
-                pct: p.pct,
-                apy_est_pct: p.apy_est_pct,
-                icon: p.icon,
-            })
-            .collect(),
-    };
-
-    Ok(Json(response))
+    Ok(Json(composition))
 }
 
 #[utoipa::path(
@@ -128,7 +86,7 @@ pub async fn get_vault_composition(
         ("group_by" = String, Query, description = "Group by platform or asset", example = "platform")
     ),
     responses(
-        (status = 200, description = "Historical composition data", body = VaultCompositionSeriesResponse),
+        (status = 200, description = "Historical composition data", body = CompositionSeriesDTO),
         (status = 400, description = "Invalid parameters"),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
@@ -186,20 +144,5 @@ pub async fn get_vault_composition_series(
             ApiError::InternalServerError
         })?;
 
-    // Convert the helper DTO to our API response DTO
-    let response = VaultCompositionSeriesResponse {
-        timeframe: composition_series.timeframe,
-        group_by: composition_series.group_by,
-        labels: composition_series.labels,
-        points: composition_series
-            .points
-            .into_iter()
-            .map(|p| CompositionSeriesPoint {
-                t: p.t,
-                weights_pct: p.weights_pct,
-            })
-            .collect(),
-    };
-
-    Ok(Json(response))
+    Ok(Json(composition_series))
 }

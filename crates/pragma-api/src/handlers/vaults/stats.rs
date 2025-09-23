@@ -4,8 +4,10 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::{AppState, dto::VaultStats, errors::ApiError, helpers::VaultMasterAPIClient};
 use pragma_db::models::Vault;
+use pragma_master::{GetStatsDTO, VaultMasterAPIClient};
+
+use crate::{AppState, errors::ApiError};
 
 #[utoipa::path(
     get,
@@ -15,7 +17,7 @@ use pragma_db::models::Vault;
         ("vault_id" = String, Path, description = "Vault identifier")
     ),
     responses(
-        (status = 200, description = "Vault statistics", body = VaultStats),
+        (status = 200, description = "Vault statistics", body = GetStatsDTO),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
     )
@@ -49,14 +51,10 @@ pub async fn get_vault_stats(
 
     // Call the vault's portfolio/stats endpoint via helper
     let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let stats = client.get_vault_stats().await.map_err(|e| {
+    let vault_stats = client.get_vault_stats().await.map_err(|e| {
         tracing::error!("Failed to fetch vault stats: {}", e);
         ApiError::InternalServerError
     })?;
 
-    // TODO: use the DTO directly
-    Ok(Json(VaultStats {
-        tvl: stats.tvl,
-        past_month_apr_pct: stats.past_month_apr_pct,
-    }))
+    Ok(Json(vault_stats))
 }

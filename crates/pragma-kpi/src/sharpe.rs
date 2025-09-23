@@ -49,7 +49,8 @@ pub fn calculate_sharpe_ratio(
     let count_dec = Decimal::from(count);
     let mean_return = sum_returns / count_dec;
     // Variance = E[X^2] - (E[X])^2
-    let variance = (sum_squared_returns / count_dec) - (mean_return * mean_return);
+    let mean_return_squared = mean_return.powu(2);
+    let variance = (sum_squared_returns / count_dec) - mean_return_squared;
     let std_dev = if variance > Decimal::ZERO {
         variance.sqrt().ok_or_else(|| {
             KpiError::CalculationError("Failed to compute standard deviation".to_string())

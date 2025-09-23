@@ -4,9 +4,10 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::{AppState, dto::UserPositionSummary, errors::ApiError, helpers::VaultMasterAPIClient};
+use crate::{AppState, dto::UserPositionSummary, errors::ApiError};
 use chrono::Utc;
 use pragma_db::models::{UserPosition, UserTransaction, Vault};
+use pragma_master::VaultMasterAPIClient;
 use rust_decimal::Decimal;
 
 #[utoipa::path(
@@ -75,11 +76,10 @@ pub async fn get_user_position_summary(
 
     // Fetch current share price from vault API
     let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let info = client.get_vault_share_price().await.map_err(|e| {
+    let share_price_str = client.get_vault_share_price().await.map_err(|e| {
         tracing::error!("Failed to fetch vault share price: {}", e);
         ApiError::InternalServerError
     })?;
-    let share_price_str = info.share_price_in_usd;
 
     let share_price = share_price_str.parse::<Decimal>().map_err(|e| {
         tracing::error!("Failed to parse share price '{share_price_str}': {e}");

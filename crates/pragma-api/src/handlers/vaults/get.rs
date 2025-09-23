@@ -4,9 +4,10 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::helpers::{VaultMasterAPIClient, map_status};
+use crate::helpers::map_status;
 use crate::{AppState, dto::Vault as VaultDto, errors::ApiError};
 use pragma_db::models::Vault;
+use pragma_master::VaultMasterAPIClient;
 
 #[utoipa::path(
     get,
@@ -49,11 +50,11 @@ pub async fn get_vault(
 
     // Fetch non-metadata (tvl & share_price) from the vault's API endpoint.
     let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let stats = client.get_vault_stats().await.map_err(|e| {
+    let vault_stats = client.get_vault_stats().await.map_err(|e| {
         tracing::error!("Failed to fetch vault stats: {}", e);
         ApiError::InternalServerError
     })?;
-    let info = client.get_vault_share_price().await.map_err(|e| {
+    let share_price = client.get_vault_share_price().await.map_err(|e| {
         tracing::error!("Failed to fetch vault share price: {}", e);
         ApiError::InternalServerError
     })?;
@@ -62,8 +63,8 @@ pub async fn get_vault(
     let mut dto = VaultDto::from(vault);
     // Map status to spec: active -> live
     dto.status = map_status(&dto.status);
-    dto.tvl = stats.tvl;
-    dto.share_price = info.share_price_in_usd;
+    dto.tvl = vault_stats.tvl;
+    dto.share_price = share_price;
 
     Ok(Json(dto))
 }

@@ -3,20 +3,11 @@ use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
 };
-use serde::Deserialize;
 
-use crate::{AppState, dto::VaultKpisResponse, errors::ApiError, helpers::VaultMasterAPIClient};
 use pragma_db::models::Vault;
+use pragma_master::{KpisDTO, VaultMasterAPIClient};
 
-#[derive(Debug, Deserialize)]
-pub struct KpisQuery {
-    #[serde(default = "default_timeframe")]
-    timeframe: String,
-}
-
-fn default_timeframe() -> String {
-    "all".to_string()
-}
+use crate::{AppState, dto::TimeframeQuery, errors::ApiError};
 
 #[utoipa::path(
     get,
@@ -27,7 +18,7 @@ fn default_timeframe() -> String {
         ("timeframe" = String, Query, description = "Time period for KPI calculation", example = "all")
     ),
     responses(
-        (status = 200, description = "Vault performance KPIs", body = VaultKpisResponse),
+        (status = 200, description = "Vault performance KPIs", body = KpisDTO),
         (status = 400, description = "Invalid parameters"),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
@@ -36,8 +27,10 @@ fn default_timeframe() -> String {
 pub async fn get_vault_kpis(
     State(state): State<AppState>,
     Path(vault_id): Path<String>,
-    Query(params): Query<KpisQuery>,
+    Query(params): Query<TimeframeQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
+    tracing::info!("Getting vault KPIs for {:?}", params);
+
     // Validate timeframe parameter
     if !["7d", "30d", "1y", "all"].contains(&params.timeframe.as_str()) {
         return Err(ApiError::BadRequest(
@@ -78,13 +71,5 @@ pub async fn get_vault_kpis(
             ApiError::InternalServerError
         })?;
 
-    // Convert the helper DTO to our API response DTO
-    let response = VaultKpisResponse {
-        cumulative_pnl_usd: kpis.cumulative_pnl_usd,
-        max_drawdown_pct: kpis.max_drawdown_pct,
-        sharpe: kpis.sharpe,
-        profit_share_bps: kpis.profit_share_bps,
-    };
-
-    Ok(Json(response))
+    Ok(Json(kpis))
 }

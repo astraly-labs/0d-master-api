@@ -4,9 +4,10 @@ use crate::{
     AppState,
     dto::{VaultListItem, VaultListResponse},
     errors::ApiError,
-    helpers::{VaultMasterAPIClient, map_status},
+    helpers::map_status,
 };
 use pragma_db::models::Vault;
+use pragma_master::VaultMasterAPIClient;
 use reqwest::StatusCode as HttpStatusCode;
 
 #[utoipa::path(

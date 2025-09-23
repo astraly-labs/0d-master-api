@@ -3,35 +3,15 @@ use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
 };
-use serde::Deserialize;
+
+use pragma_db::models::Vault;
+use pragma_master::{AprSeriesDTO, AprSummaryDTO, VaultMasterAPIClient};
 
 use crate::{
     AppState,
-    dto::{AprBasis, AprPoint, VaultAprSeriesResponse, VaultAprSummaryResponse},
+    dto::{AprSeriesQuery, AprSummaryQuery},
     errors::ApiError,
-    helpers::{AprSummaryBasis, VaultMasterAPIClient},
 };
-use pragma_db::models::Vault;
-
-#[derive(Debug, Deserialize)]
-pub struct AprSummaryQuery {
-    #[serde(default = "default_apr_basis")]
-    apr_basis: String,
-}
-
-fn default_apr_basis() -> String {
-    "nominal".to_string()
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AprSeriesQuery {
-    #[serde(default = "default_timeframe")]
-    timeframe: String,
-}
-
-fn default_timeframe() -> String {
-    "all".to_string()
-}
 
 #[utoipa::path(
     get,
@@ -42,7 +22,7 @@ fn default_timeframe() -> String {
         ("apr_basis" = String, Query, description = "APR calculation basis", example = "nominal")
     ),
     responses(
-        (status = 200, description = "APR summary", body = VaultAprSummaryResponse),
+        (status = 200, description = "APR summary", body = AprSummaryDTO),
         (status = 400, description = "Invalid parameters"),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
@@ -93,16 +73,7 @@ pub async fn get_vault_apr_summary(
             ApiError::InternalServerError
         })?;
 
-    // Convert the helper DTO to our API response DTO
-    let response = VaultAprSummaryResponse {
-        apr_pct: apr_summary.apr_pct,
-        apr_basis: match apr_summary.apr_basis {
-            AprSummaryBasis::Nominal => AprBasis::Nominal,
-            AprSummaryBasis::InflationAdjusted => AprBasis::InflationAdjusted,
-        },
-    };
-
-    Ok(Json(response))
+    Ok(Json(apr_summary))
 }
 
 #[utoipa::path(
@@ -114,7 +85,7 @@ pub async fn get_vault_apr_summary(
         ("timeframe" = String, Query, description = "Time period for APR series", example = "7d")
     ),
     responses(
-        (status = 200, description = "Historical APR data", body = VaultAprSeriesResponse),
+        (status = 200, description = "Historical APR data", body = AprSeriesDTO),
         (status = 400, description = "Invalid parameters"),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
@@ -165,18 +136,5 @@ pub async fn get_vault_apr_series(
             ApiError::InternalServerError
         })?;
 
-    // Convert the helper DTO to our API response DTO
-    let response = VaultAprSeriesResponse {
-        timeframe: params.timeframe,
-        points: apr_series
-            .points
-            .into_iter()
-            .map(|p| AprPoint {
-                t: p.t,
-                apr_pct: p.apr_pct,
-            })
-            .collect(),
-    };
-
-    Ok(Json(response))
+    Ok(Json(apr_series))
 }

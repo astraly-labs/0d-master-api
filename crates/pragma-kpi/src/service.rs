@@ -1,14 +1,15 @@
-use anyhow::Result;
 use chrono::Utc;
 use deadpool_diesel::postgres::Pool;
 use rust_decimal::Decimal;
 use std::time::Duration;
 
-use crate::{
-    calculate_max_drawdown, calculate_sharpe_ratio, calculate_sortino_ratio, calculate_user_pnl,
-};
 use pragma_db::models::{
     TransactionType, UserKpi, UserKpiUpdate, UserPosition, UserTransaction, Vault,
+};
+use pragma_master::VaultMasterAPIClient;
+
+use crate::{
+    calculate_max_drawdown, calculate_sharpe_ratio, calculate_sortino_ratio, calculate_user_pnl,
 };
 
 pub struct KpiService {
@@ -22,7 +23,7 @@ impl KpiService {
         Self { db_pool }
     }
 
-    pub async fn run_forever(&self) -> Result<()> {
+    pub async fn run_forever(&self) -> anyhow::Result<()> {
         // TODO: Wait for the indexer to be fully synced (or fixed hour run)
         tokio::time::sleep(Duration::from_secs(20)).await;
 
@@ -36,21 +37,17 @@ impl KpiService {
         }
     }
 
-    pub async fn run_daily_kpi_calculations(&self) -> Result<()> {
+    pub async fn run_daily_kpi_calculations(&self) -> anyhow::Result<()> {
         tracing::info!("[KpiService] 🧮 Starting daily KPI calculations...");
         let start_time = Utc::now();
 
-        // Get all active vaults
         let vaults = self.get_active_vaults().await?;
-
         let mut total_updates = 0;
         let mut total_errors = 0;
 
         for vault in vaults {
             match self.calculate_vault_daily_kpis(&vault).await {
-                Ok(updates) => {
-                    total_updates += updates;
-                }
+                Ok(updates) => total_updates += updates,
                 Err(e) => {
                     tracing::error!(
                         "[KpiService] 🔴 Failed to calculate daily KPIs for vault {}: {}",
@@ -74,15 +71,11 @@ impl KpiService {
     }
 
     /// Calculate daily KPIs for all users in a specific vault
-    async fn calculate_vault_daily_kpis(&self, vault: &Vault) -> Result<usize> {
-        // Get current share price from vault API
+    async fn calculate_vault_daily_kpis(&self, vault: &Vault) -> anyhow::Result<usize> {
         let current_share_price = Self::fetch_vault_share_price(vault).await?;
-
-        // Get all users with positions in this vault
         let user_positions = self.get_vault_user_positions(&vault.id).await?;
 
         let mut updated_count = 0;
-
         for position in user_positions {
             match self
                 .calculate_user_daily_kpis(&position, &vault.id, current_share_price)
@@ -101,7 +94,7 @@ impl KpiService {
         }
 
         tracing::info!(
-            "[KpiService] ✅ Completed KPI calculation for vault {}: {} users updated",
+            "[KpiService] 🧮 Completed KPI calculation for vault {}: {} users updated",
             vault.id,
             updated_count
         );
@@ -115,7 +108,7 @@ impl KpiService {
         position: &UserPosition,
         vault_id: &str,
         current_share_price: Decimal,
-    ) -> Result<()> {
+    ) -> anyhow::Result<()> {
         // Get user transactions for this vault
         let transactions = self
             .get_user_vault_transactions(&position.user_address, vault_id)
@@ -175,7 +168,7 @@ impl KpiService {
         user_address: &str,
         vault_id: &str,
         current_share_price: Decimal,
-    ) -> Result<Vec<(chrono::DateTime<Utc>, Decimal)>> {
+    ) -> anyhow::Result<Vec<(chrono::DateTime<Utc>, Decimal)>> {
         let conn = self.db_pool.get().await?;
         let user_address_clone = user_address.to_string();
         let vault_id_clone = vault_id.to_string();
@@ -225,26 +218,28 @@ impl KpiService {
     }
 
     /// Get all active vaults
-    async fn get_active_vaults(&self) -> Result<Vec<Vault>> {
+    async fn get_active_vaults(&self) -> anyhow::Result<Vec<Vault>> {
         let conn = self.db_pool.get().await?;
 
         let vaults = conn
             .interact(Vault::find_live)
             .await
-            .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
+            .map_err(|e| anyhow::anyhow!("Database error: {:?}", e))??;
 
         Ok(vaults)
     }
 
     /// Get all user positions for a vault
-    async fn get_vault_user_positions(&self, vault_id: &str) -> Result<Vec<UserPosition>> {
+    async fn get_vault_user_positions(&self, vault_id: &str) -> anyhow::Result<Vec<UserPosition>> {
         let conn = self.db_pool.get().await?;
         let vault_id_clone = vault_id.to_string();
 
         let positions = conn
             .interact(move |conn| UserPosition::find_active_by_vault(&vault_id_clone, conn))
             .await
-            .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
+            .map_err(|e| {
+                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
+            })??;
 
         Ok(positions)
     }
@@ -254,7 +249,7 @@ impl KpiService {
         &self,
         user_address: &str,
         vault_id: &str,
-    ) -> Result<Vec<UserTransaction>> {
+    ) -> anyhow::Result<Vec<UserTransaction>> {
         let conn = self.db_pool.get().await?;
         let user_address = user_address.to_string();
         let vault_id = vault_id.to_string();
@@ -281,7 +276,7 @@ impl KpiService {
         user_address: &str,
         vault_id: &str,
         kpi_data: &UserKpiUpdate,
-    ) -> Result<()> {
+    ) -> anyhow::Result<()> {
         let conn = self.db_pool.get().await?;
         let user_address = user_address.to_string();
         let vault_id = vault_id.to_string();
@@ -297,7 +292,11 @@ impl KpiService {
     }
 
     /// Get user position
-    async fn get_user_position(&self, user_address: &str, vault_id: &str) -> Result<UserPosition> {
+    async fn get_user_position(
+        &self,
+        user_address: &str,
+        vault_id: &str,
+    ) -> anyhow::Result<UserPosition> {
         let conn = self.db_pool.get().await?;
         let user_address_clone = user_address.to_string();
         let vault_id_clone = vault_id.to_string();
@@ -314,81 +313,18 @@ impl KpiService {
         Ok(position)
     }
 
-    /// Get vault information for monitoring and debugging
-    pub async fn get_vault_info(&self) -> Result<Vec<(String, String, String, String)>> {
-        let vaults = self.get_active_vaults().await?;
+    /// Fetch vault share price using `VaultMasterAPIClient`
+    async fn fetch_vault_share_price(vault: &Vault) -> anyhow::Result<Decimal> {
+        let client = VaultMasterAPIClient::new(&vault.api_endpoint)
+            .map_err(|e| anyhow::anyhow!("Failed to create vault client: {e}"))?;
 
-        let vault_info = vaults
-            .into_iter()
-            .map(|vault| (vault.id, vault.name, vault.symbol, vault.api_endpoint))
-            .collect();
+        let share_price_str = client
+            .get_vault_share_price()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch share price: {e}"))?;
 
-        Ok(vault_info)
-    }
-
-    /// Verify vault API connectivity for all vaults
-    pub async fn check_vault_connectivity(&self) -> Result<Vec<(String, bool, Option<String>)>> {
-        let vaults = self.get_active_vaults().await?;
-        let mut results = Vec::new();
-
-        for vault in vaults {
-            match Self::fetch_vault_share_price(&vault).await {
-                Ok(price) => {
-                    results.push((
-                        vault.id.clone(),
-                        true,
-                        Some(format!("Share price: {price}",)),
-                    ));
-                }
-                Err(e) => {
-                    results.push((vault.id.clone(), false, Some(e.to_string())));
-                }
-            }
-        }
-
-        Ok(results)
-    }
-
-    /// Fetch vault share price using the same endpoints as vault API helpers
-    async fn fetch_vault_share_price(vault: &Vault) -> Result<Decimal> {
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(5))
-            .build()?;
-
-        // Properly construct URL - handle endpoints that already include /v1/
-        let base_url = vault.api_endpoint.trim_end_matches('/');
-        let url = if base_url.ends_with("/v1") {
-            format!("{base_url}/vault/info")
-        } else {
-            format!("{base_url}/v1/vault/info")
-        };
-
-        let response = client.get(&url).send().await?;
-
-        if !response.status().is_success() {
-            return Err(anyhow::anyhow!(
-                "[KpiService] 🔴 Vault API returned status: {} for URL: {}",
-                response.status(),
-                url
-            ));
-        }
-
-        let vault_info: serde_json::Value = response.json().await?;
-
-        // Try to get share_price_in_usd (same field as VaultMasterAPIClient)
-        let share_price_str = vault_info
-            .get("share_price_in_usd")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "[KpiService] 🔴 share_price_in_usd not found in vault API response from {}. Response: {:?}", 
-                    url,
-                    vault_info
-                )
-            })?;
-
-        let share_price = share_price_str.parse::<Decimal>()?;
-
-        Ok(share_price)
+        share_price_str
+            .parse::<Decimal>()
+            .map_err(|e| anyhow::anyhow!("Invalid share price format: {e}"))
     }
 }

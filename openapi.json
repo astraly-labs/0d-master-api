@@ -396,7 +396,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultAprSeriesResponse"
+                  "$ref": "#/components/schemas/AprSeriesDTO"
                 }
               }
             }
@@ -446,7 +446,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultAprSummaryResponse"
+                  "$ref": "#/components/schemas/AprSummaryDTO"
                 }
               }
             }
@@ -486,7 +486,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultCapsResponse"
+                  "$ref": "#/components/schemas/CapsDTO"
                 }
               }
             }
@@ -533,7 +533,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultCompositionResponse"
+                  "$ref": "#/components/schemas/CompositionDTO"
                 }
               }
             }
@@ -593,13 +593,50 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultCompositionSeriesResponse"
+                  "$ref": "#/components/schemas/CompositionSeriesDTO"
                 }
               }
             }
           },
           "400": {
             "description": "Invalid parameters"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/info": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_info",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vault information including share price and AUM",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultInfoDTO"
+                }
+              }
+            }
           },
           "404": {
             "description": "Vault not found"
@@ -643,7 +680,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultKpisResponse"
+                  "$ref": "#/components/schemas/KpisDTO"
                 }
               }
             }
@@ -683,7 +720,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultLiquidityResponse"
+                  "$ref": "#/components/schemas/LiquidityDTO"
                 }
               }
             }
@@ -720,7 +757,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultSlippageCurveResponse"
+                  "$ref": "#/components/schemas/SlippageCurveDTO"
                 }
               }
             }
@@ -767,7 +804,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LiquiditySimulateResponse"
+                  "$ref": "#/components/schemas/LiquiditySimulateResponseDTO"
                 }
               }
             }
@@ -807,7 +844,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultNavLatestResponse"
+                  "$ref": "#/components/schemas/NavLatestDTO"
                 }
               }
             }
@@ -844,7 +881,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultStats"
+                  "$ref": "#/components/schemas/GetStatsDTO"
                 }
               }
             }
@@ -911,7 +948,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VaultTimeseriesResponse"
+                  "$ref": "#/components/schemas/TimeseriesResponseDTO"
                 }
               }
             }
@@ -933,6 +970,7 @@
     "schemas": {
       "AprBasis": {
         "type": "string",
+        "description": "APR basis enum",
         "enum": [
           "nominal",
           "inflation_adjusted"
@@ -940,6 +978,7 @@
       },
       "AprPoint": {
         "type": "object",
+        "description": "APR data point for timeseries",
         "required": [
           "t",
           "apr_pct"
@@ -954,7 +993,59 @@
           }
         }
       },
-      "CapItem": {
+      "AprSeriesDTO": {
+        "type": "object",
+        "required": [
+          "timeframe",
+          "points"
+        ],
+        "properties": {
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AprPoint"
+            }
+          },
+          "timeframe": {
+            "$ref": "#/components/schemas/Timeframe"
+          }
+        }
+      },
+      "AprSeriesQuery": {
+        "type": "object",
+        "description": "Query parameters for APR series endpoint",
+        "properties": {
+          "timeframe": {
+            "type": "string"
+          }
+        }
+      },
+      "AprSummaryDTO": {
+        "type": "object",
+        "required": [
+          "apr_pct",
+          "apr_basis"
+        ],
+        "properties": {
+          "apr_basis": {
+            "$ref": "#/components/schemas/AprBasis"
+          },
+          "apr_pct": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "AprSummaryQuery": {
+        "type": "object",
+        "description": "Query parameters for APR summary endpoint",
+        "properties": {
+          "apr_basis": {
+            "type": "string"
+          }
+        }
+      },
+      "CapItemDTO": {
         "type": "object",
         "required": [
           "name",
@@ -979,8 +1070,41 @@
           }
         }
       },
+      "CapsDTO": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CapItemDTO"
+            }
+          }
+        }
+      },
+      "CompositionDTO": {
+        "type": "object",
+        "required": [
+          "as_of",
+          "positions"
+        ],
+        "properties": {
+          "as_of": {
+            "type": "string"
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompositionPosition"
+            }
+          }
+        }
+      },
       "CompositionPosition": {
         "type": "object",
+        "description": "Composition position data",
         "required": [
           "platform",
           "asset",
@@ -1014,7 +1138,45 @@
           }
         }
       },
-      "CompositionSeriesPoint": {
+      "CompositionQuery": {
+        "type": "object",
+        "description": "Query parameters for composition endpoint",
+        "properties": {
+          "group_by": {
+            "type": "string"
+          }
+        }
+      },
+      "CompositionSeriesDTO": {
+        "type": "object",
+        "required": [
+          "timeframe",
+          "group_by",
+          "labels",
+          "points"
+        ],
+        "properties": {
+          "group_by": {
+            "type": "string"
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompositionSeriesPointDTO"
+            }
+          },
+          "timeframe": {
+            "type": "string"
+          }
+        }
+      },
+      "CompositionSeriesPointDTO": {
         "type": "object",
         "required": [
           "t",
@@ -1030,6 +1192,18 @@
               "type": "number",
               "format": "double"
             }
+          }
+        }
+      },
+      "CompositionSeriesQuery": {
+        "type": "object",
+        "description": "Query parameters for composition series endpoint",
+        "properties": {
+          "group_by": {
+            "type": "string"
+          },
+          "timeframe": {
+            "type": "string"
           }
         }
       },
@@ -1074,8 +1248,25 @@
           "usdc"
         ]
       },
+      "GetStatsDTO": {
+        "type": "object",
+        "required": [
+          "tvl",
+          "past_month_apr_pct"
+        ],
+        "properties": {
+          "past_month_apr_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "tvl": {
+            "type": "string"
+          }
+        }
+      },
       "GroupBy": {
         "type": "string",
+        "description": "Group by enum for composition endpoints",
         "enum": [
           "platform",
           "asset"
@@ -1136,7 +1327,7 @@
           }
         }
       },
-      "InstantLiquidity": {
+      "InstantLiquidityDTO": {
         "type": "object",
         "required": [
           "supported",
@@ -1157,6 +1348,64 @@
           }
         }
       },
+      "KpisDTO": {
+        "type": "object",
+        "required": [
+          "cumulative_pnl_usd",
+          "max_drawdown_pct",
+          "sharpe",
+          "profit_share_bps"
+        ],
+        "properties": {
+          "cumulative_pnl_usd": {
+            "type": "string"
+          },
+          "max_drawdown_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "profit_share_bps": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "sharpe": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "LiquidityDTO": {
+        "type": "object",
+        "required": [
+          "is_liquid",
+          "withdraw_capacity_usd_24h",
+          "deposit_capacity_usd_24h"
+        ],
+        "properties": {
+          "as_of": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deposit_capacity_usd_24h": {
+            "type": "string"
+          },
+          "is_liquid": {
+            "type": "boolean"
+          },
+          "policy_markdown": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "withdraw_capacity_usd_24h": {
+            "type": "string"
+          }
+        }
+      },
       "LiquiditySimulateRequest": {
         "type": "object",
         "required": [
@@ -1168,7 +1417,7 @@
           }
         }
       },
-      "LiquiditySimulateResponse": {
+      "LiquiditySimulateResponseDTO": {
         "type": "object",
         "required": [
           "amount",
@@ -1184,15 +1433,44 @@
                 "type": "null"
               },
               {
-                "$ref": "#/components/schemas/InstantLiquidity"
+                "$ref": "#/components/schemas/InstantLiquidityDTO"
               }
             ]
           },
           "scheduled": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ScheduledWindow"
+              "$ref": "#/components/schemas/ScheduledWindowDTO"
             }
+          }
+        }
+      },
+      "NavLatestDTO": {
+        "type": "object",
+        "required": [
+          "date",
+          "aum",
+          "var_since_prev_pct",
+          "apr_since_prev_pct",
+          "report_url"
+        ],
+        "properties": {
+          "apr_since_prev_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "aum": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "report_url": {
+            "type": "string"
+          },
+          "var_since_prev_pct": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -1211,7 +1489,7 @@
           "error"
         ]
       },
-      "ScheduledWindow": {
+      "ScheduledWindowDTO": {
         "type": "object",
         "required": [
           "window",
@@ -1232,7 +1510,25 @@
           }
         }
       },
-      "SlippagePoint": {
+      "SlippageCurveDTO": {
+        "type": "object",
+        "required": [
+          "is_liquid",
+          "points"
+        ],
+        "properties": {
+          "is_liquid": {
+            "type": "boolean"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlippagePointDTO"
+            }
+          }
+        }
+      },
+      "SlippagePointDTO": {
         "type": "object",
         "required": [
           "amount_usd",
@@ -1258,6 +1554,15 @@
           "all"
         ]
       },
+      "TimeframeQuery": {
+        "type": "object",
+        "description": "Common query parameters for endpoints that accept timeframe",
+        "properties": {
+          "timeframe": {
+            "type": "string"
+          }
+        }
+      },
       "TimeseriesCurrency": {
         "type": "string",
         "enum": [
@@ -1274,6 +1579,7 @@
       },
       "TimeseriesPoint": {
         "type": "object",
+        "description": "Common timeseries data point used across vault and user endpoints",
         "required": [
           "t",
           "v"
@@ -1287,14 +1593,45 @@
           }
         }
       },
-      "TimeseriesTimeframe": {
-        "type": "string",
-        "enum": [
-          "7d",
-          "30d",
-          "1y",
-          "all"
-        ]
+      "TimeseriesQuery": {
+        "type": "object",
+        "description": "Query parameters for timeseries endpoint",
+        "required": [
+          "metric"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "metric": {
+            "type": "string"
+          },
+          "timeframe": {
+            "type": "string"
+          }
+        }
+      },
+      "TimeseriesResponseDTO": {
+        "type": "object",
+        "required": [
+          "metric",
+          "timeframe",
+          "points"
+        ],
+        "properties": {
+          "metric": {
+            "type": "string"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeseriesPoint"
+            }
+          },
+          "timeframe": {
+            "type": "string"
+          }
+        }
       },
       "TransactionStatus": {
         "type": "string",
@@ -1572,156 +1909,40 @@
           }
         }
       },
-      "VaultAprSeriesResponse": {
+      "VaultInfoDTO": {
         "type": "object",
         "required": [
-          "timeframe",
-          "points"
+          "current_epoch",
+          "underlying_currency",
+          "pending_withdrawals_assets",
+          "aum",
+          "buffer",
+          "share_price_in_usd"
         ],
         "properties": {
-          "points": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AprPoint"
-            }
+          "aum": {
+            "type": "string",
+            "description": "Assets under management (AUM) in underlying currency"
           },
-          "timeframe": {
-            "type": "string"
-          }
-        }
-      },
-      "VaultAprSummaryResponse": {
-        "type": "object",
-        "required": [
-          "apr_pct",
-          "apr_basis"
-        ],
-        "properties": {
-          "apr_basis": {
-            "$ref": "#/components/schemas/AprBasis"
+          "buffer": {
+            "type": "string",
+            "description": "Current buffer amount in underlying currency"
           },
-          "apr_pct": {
-            "type": "number",
-            "format": "double"
-          }
-        }
-      },
-      "VaultCapsResponse": {
-        "type": "object",
-        "required": [
-          "items"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CapItem"
-            }
-          }
-        }
-      },
-      "VaultCompositionResponse": {
-        "type": "object",
-        "required": [
-          "as_of",
-          "positions"
-        ],
-        "properties": {
-          "as_of": {
-            "type": "string"
+          "current_epoch": {
+            "type": "string",
+            "description": "Current epoch number"
           },
-          "positions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CompositionPosition"
-            }
-          }
-        }
-      },
-      "VaultCompositionSeriesResponse": {
-        "type": "object",
-        "required": [
-          "timeframe",
-          "group_by",
-          "labels",
-          "points"
-        ],
-        "properties": {
-          "group_by": {
-            "type": "string"
+          "pending_withdrawals_assets": {
+            "type": "string",
+            "description": "Total assets required for pending withdrawals (sum of all epochs)"
           },
-          "labels": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "share_price_in_usd": {
+            "type": "string",
+            "description": "Current share price in USD"
           },
-          "points": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CompositionSeriesPoint"
-            }
-          },
-          "timeframe": {
-            "type": "string"
-          }
-        }
-      },
-      "VaultKpisResponse": {
-        "type": "object",
-        "required": [
-          "cumulative_pnl_usd",
-          "max_drawdown_pct",
-          "sharpe",
-          "profit_share_bps"
-        ],
-        "properties": {
-          "cumulative_pnl_usd": {
-            "type": "string"
-          },
-          "max_drawdown_pct": {
-            "type": "number",
-            "format": "double"
-          },
-          "profit_share_bps": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 0
-          },
-          "sharpe": {
-            "type": "number",
-            "format": "double"
-          }
-        }
-      },
-      "VaultLiquidityResponse": {
-        "type": "object",
-        "required": [
-          "is_liquid",
-          "withdraw_capacity_usd_24h",
-          "deposit_capacity_usd_24h"
-        ],
-        "properties": {
-          "as_of": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "deposit_capacity_usd_24h": {
-            "type": "string"
-          },
-          "is_liquid": {
-            "type": "boolean"
-          },
-          "policy_markdown": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "withdraw_capacity_usd_24h": {
-            "type": "string"
+          "underlying_currency": {
+            "type": "string",
+            "description": "The underlying currency ticker (e.g., \"USDC\", \"USDT\")"
           }
         }
       },
@@ -1773,35 +1994,6 @@
             "items": {
               "$ref": "#/components/schemas/VaultListItem"
             }
-          }
-        }
-      },
-      "VaultNavLatestResponse": {
-        "type": "object",
-        "required": [
-          "date",
-          "aum",
-          "var_since_prev_pct",
-          "apr_since_prev_pct",
-          "report_url"
-        ],
-        "properties": {
-          "apr_since_prev_pct": {
-            "type": "number",
-            "format": "double"
-          },
-          "aum": {
-            "type": "string"
-          },
-          "date": {
-            "type": "string"
-          },
-          "report_url": {
-            "type": "string"
-          },
-          "var_since_prev_pct": {
-            "type": "number",
-            "format": "double"
           }
         }
       },
@@ -1857,62 +2049,6 @@
             "type": "string"
           },
           "tvl_in_usd": {
-            "type": "string"
-          }
-        }
-      },
-      "VaultSlippageCurveResponse": {
-        "type": "object",
-        "required": [
-          "is_liquid",
-          "points"
-        ],
-        "properties": {
-          "is_liquid": {
-            "type": "boolean"
-          },
-          "points": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SlippagePoint"
-            }
-          }
-        }
-      },
-      "VaultStats": {
-        "type": "object",
-        "required": [
-          "tvl",
-          "past_month_apr_pct"
-        ],
-        "properties": {
-          "past_month_apr_pct": {
-            "type": "number",
-            "format": "double"
-          },
-          "tvl": {
-            "type": "string"
-          }
-        }
-      },
-      "VaultTimeseriesResponse": {
-        "type": "object",
-        "required": [
-          "metric",
-          "timeframe",
-          "points"
-        ],
-        "properties": {
-          "metric": {
-            "type": "string"
-          },
-          "points": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TimeseriesPoint"
-            }
-          },
-          "timeframe": {
             "type": "string"
           }
         }

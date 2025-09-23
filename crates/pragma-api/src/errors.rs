@@ -19,6 +19,17 @@ pub enum ApiError {
     InternalServerError,
 }
 
+impl From<pragma_master::MasterApiError> for ApiError {
+    fn from(err: pragma_master::MasterApiError) -> Self {
+        match err {
+            pragma_master::MasterApiError::InternalServerError
+            | pragma_master::MasterApiError::HttpError(_)
+            | pragma_master::MasterApiError::JsonError(_)
+            | pragma_master::MasterApiError::AnyhowError(_) => Self::InternalServerError,
+        }
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
         let (status, msg) = match self {

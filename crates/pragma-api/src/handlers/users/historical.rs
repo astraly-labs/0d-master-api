@@ -24,11 +24,11 @@ pub struct HistoricalQuery {
     pub currency: DisplayCurrency,
 }
 
-fn default_timeframe() -> Timeframe {
+const fn default_timeframe() -> Timeframe {
     Timeframe::All
 }
 
-fn default_currency() -> DisplayCurrency {
+const fn default_currency() -> DisplayCurrency {
     DisplayCurrency::USD
 }
 

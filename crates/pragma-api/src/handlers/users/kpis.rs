@@ -5,9 +5,10 @@ use axum::{
 };
 use rust_decimal::Decimal;
 
-use crate::{AppState, dto::UserKpi, errors::ApiError, helpers::VaultMasterAPIClient};
+use crate::{AppState, dto::UserKpi, errors::ApiError};
 use pragma_db::models::{UserPosition, UserTransaction, Vault};
 use pragma_kpi::calculate_user_pnl;
+use pragma_master::VaultMasterAPIClient;
 
 #[utoipa::path(
     get,
@@ -98,11 +99,10 @@ pub async fn get_user_kpis(
 
     // Fetch current share price from vault API
     let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let info = client.get_vault_share_price().await.map_err(|e| {
+    let current_share_price_str = client.get_vault_share_price().await.map_err(|e| {
         tracing::error!("Failed to fetch vault share price: {}", e);
         ApiError::InternalServerError
     })?;
-    let current_share_price_str = info.share_price_in_usd;
 
     let current_share_price = current_share_price_str.parse::<Decimal>().map_err(|e| {
         tracing::error!("Failed to parse share price '{current_share_price_str}': {e}",);

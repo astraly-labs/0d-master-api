@@ -2670,6 +2670,7 @@ dependencies = [
  "pragma-common",
  "pragma-db",
  "pragma-kpi",
+ "pragma-master",
  "reqwest",
  "rust_decimal",
  "serde",
@@ -2788,6 +2789,7 @@ dependencies = [
  "diesel",
  "pragma-common",
  "pragma-db",
+ "pragma-master",
  "reqwest",
  "rust_decimal",
  "serde",
@@ -2795,6 +2797,23 @@ dependencies = [
  "thiserror 2.0.16",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "pragma-master"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "pragma-common",
+ "pragma-db",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.16",
+ "tokio",
+ "tracing",
+ "utoipa",
 ]
 
 [[package]]

@@ -18,6 +18,7 @@ members = [
     "crates/pragma-db",
     "crates/pragma-indexer",
     "crates/pragma-kpi",
+    "crates/pragma-master",
 ]
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -70,6 +71,7 @@ pragma-api = { path = "crates/pragma-api", default-features = false }
 pragma-db = { path = "crates/pragma-db", default-features = false }
 pragma-indexer = { path = "crates/pragma-indexer", default-features = false }
 pragma-kpi = { path = "crates/pragma-kpi", default-features = false }
+pragma-master = { path = "crates/pragma-master", default-features = false }
 
 # Pragma crates
 pragma-common = { version = "0.4.1", features = [

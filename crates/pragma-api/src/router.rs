@@ -29,15 +29,28 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
             "/{vault_id}/liquidity/simulate",
             post(handlers::simulate_vault_liquidity),
         )
-        .route("/{vault_id}/apr/summary", get(handlers::get_vault_apr_summary))
-        .route("/{vault_id}/apr/series", get(handlers::get_vault_apr_series))
-        .route("/{vault_id}/composition", get(handlers::get_vault_composition))
+        .route(
+            "/{vault_id}/apr/summary",
+            get(handlers::get_vault_apr_summary),
+        )
+        .route(
+            "/{vault_id}/apr/series",
+            get(handlers::get_vault_apr_series),
+        )
+        .route(
+            "/{vault_id}/composition",
+            get(handlers::get_vault_composition),
+        )
         .route(
             "/{vault_id}/composition/series",
             get(handlers::get_vault_composition_series),
         )
         .route("/{vault_id}/caps", get(handlers::get_vault_caps))
-        .route("/{vault_id}/nav/latest", get(handlers::get_vault_nav_latest));
+        .route(
+            "/{vault_id}/nav/latest",
+            get(handlers::get_vault_nav_latest),
+        )
+        .route("/{vault_id}/info", get(handlers::get_vault_info));
 
     // Group user-related endpoints under a dedicated "/users" router
     let users_router = Router::new()

@@ -3,32 +3,11 @@ use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
 };
-use serde::Deserialize;
 
-use crate::{
-    AppState,
-    dto::{TimeseriesPoint, VaultTimeseriesResponse},
-    errors::ApiError,
-    helpers::VaultMasterAPIClient,
-};
 use pragma_db::models::Vault;
+use pragma_master::{TimeseriesResponseDTO, VaultMasterAPIClient};
 
-#[derive(Debug, Deserialize)]
-pub struct TimeseriesQuery {
-    metric: String,
-    #[serde(default = "default_timeframe")]
-    timeframe: String,
-    #[serde(default = "default_currency")]
-    currency: String,
-}
-
-fn default_timeframe() -> String {
-    "all".to_string()
-}
-
-fn default_currency() -> String {
-    "USD".to_string()
-}
+use crate::{AppState, dto::TimeseriesQuery, errors::ApiError};
 
 #[utoipa::path(
     get,
@@ -41,7 +20,7 @@ fn default_currency() -> String {
         ("currency" = String, Query, description = "Currency for values", example = "USD")
     ),
     responses(
-        (status = 200, description = "Vault timeseries data", body = VaultTimeseriesResponse),
+        (status = 200, description = "Vault timeseries data", body = TimeseriesResponseDTO),
         (status = 400, description = "Invalid parameters"),
         (status = 404, description = "Vault not found"),
         (status = 500, description = "Internal server error")
@@ -97,25 +76,26 @@ pub async fn get_vault_timeseries(
         })?;
 
     // Call the vault's timeseries endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = VaultMasterAPIClient::new(&vault.api_endpoint).map_err(|e| {
+        tracing::error!(
+            "Failed to create vault API client for vault {}: {}",
+            vault_id,
+            e
+        );
+        ApiError::InternalServerError
+    })?;
+
     let timeseries = client
         .get_vault_timeseries(&params.metric, &params.timeframe, &params.currency)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to fetch vault timeseries: {}", e);
+            tracing::error!(
+                "Failed to fetch vault timeseries for vault {}: {}",
+                vault_id,
+                e
+            );
             ApiError::InternalServerError
         })?;
 
-    // Convert the helper DTO to our API response DTO
-    let response = VaultTimeseriesResponse {
-        metric: timeseries.metric,
-        timeframe: timeseries.timeframe,
-        points: timeseries
-            .points
-            .into_iter()
-            .map(|p| TimeseriesPoint { t: p.t, v: p.v })
-            .collect(),
-    };
-
-    Ok(Json(response))
+    Ok(Json(timeseries))
 }
