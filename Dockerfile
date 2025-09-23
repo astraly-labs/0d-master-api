@@ -52,14 +52,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     pkg-config \
     wget \
     unzip \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-# Install newer protobuf-compiler from GitHub releases
-RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v25.3/protoc-25.3-linux-x86_64.zip \
-    && unzip protoc-25.3-linux-x86_64.zip \
-    && mv bin/protoc /usr/local/bin/ \
-    && mv include/* /usr/local/include/ \
-    && rm -rf protoc-25.3-linux-x86_64.zip bin include
 
 ARG APP_NAME=pragma-bin
 ENV APP_NAME $APP_NAME
