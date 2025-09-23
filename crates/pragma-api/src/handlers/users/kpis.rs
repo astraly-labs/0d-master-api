@@ -3,12 +3,11 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
 };
-use chrono::Utc;
 use rust_decimal::Decimal;
 
 use crate::{AppState, dto::UserKpi, errors::ApiError, helpers::VaultMasterAPIClient};
 use pragma_db::models::{UserPosition, UserTransaction, Vault};
-use pragma_kpi::calculate_user_kpis;
+use pragma_kpi::calculate_user_pnl;
 
 #[utoipa::path(
     get,
@@ -110,35 +109,35 @@ pub async fn get_user_kpis(
         ApiError::InternalServerError
     })?;
 
-    // // Get risk metrics from daily calculations (computed by KpiService)
-    // let cached_risk_metrics = conn
-    //     .interact({
-    //         let address = address.clone();
-    //         let vault_id = vault_id.clone();
-    //         move |conn| {
-    //             pragma_db::models::UserKpi::find_by_user_and_vault(&address, &vault_id, conn)
-    //         }
-    //     })
-    //     .await;
+    // // Get KPIs from daily calculations (computed by KpiService)
+    let mut cached_kpis = conn
+        .interact({
+            let address = address.clone();
+            let vault_id = vault_id.clone();
+            move |conn| {
+                pragma_db::models::UserKpi::find_by_user_and_vault(&address, &vault_id, conn)
+            }
+        })
+        .await
+        .map_err(|e| {
+            tracing::error!("Database interaction error for risk metrics: {e}");
+            ApiError::InternalServerError
+        })?
+        .map_err(|e| {
+            tracing::error!("Failed to fetch KPIs: {e}");
+            ApiError::InternalServerError
+        })?;
 
     // Calculate PnL metrics real-time for current accuracy
-    let kpi_result =
-        calculate_user_kpis(&position, &transactions, current_share_price).map_err(|e| {
+    let pnl_result =
+        calculate_user_pnl(&position, &transactions, current_share_price).map_err(|e| {
             tracing::error!("Failed to calculate real-time PnL: {e}");
             ApiError::InternalServerError
         })?;
 
-    let user_kpi = UserKpi {
-        as_of: Utc::now(),
-        // Real-time PnL calculations (accurate to current share price)
-        all_time_pnl_usd: kpi_result.all_time_pnl.to_string(),
-        unrealized_pnl_usd: kpi_result.unrealized_pnl.to_string(),
-        realized_pnl_usd: kpi_result.realized_pnl.to_string(),
-        // Daily computed risk metrics (from KpiService)
-        max_drawdown_pct: 0.0,
-        sharpe: 0.0,
-        sortino: 0.0,
-    };
+    cached_kpis.all_time_pnl = Some(pnl_result.all_time_pnl);
+    cached_kpis.unrealized_pnl = Some(pnl_result.unrealized_pnl);
+    cached_kpis.realized_pnl = Some(pnl_result.realized_pnl);
 
-    Ok(Json(user_kpi))
+    Ok(Json(cached_kpis))
 }

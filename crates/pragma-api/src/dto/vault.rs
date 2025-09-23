@@ -74,6 +74,185 @@ pub struct VaultStats {
     pub past_month_apr_pct: f64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum TimeseriesMetric {
+    Tvl,
+    Pnl,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub enum TimeseriesTimeframe {
+    #[serde(rename = "7d")]
+    D7,
+    #[serde(rename = "30d")]
+    D30,
+    #[serde(rename = "1y")]
+    Y1,
+    #[serde(rename = "all")]
+    All,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub enum TimeseriesCurrency {
+    #[serde(rename = "USD")]
+    Usd,
+    #[serde(rename = "USDC")]
+    Usdc,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TimeseriesPoint {
+    pub t: String, // RFC3339 timestamp
+    pub v: String, // Value as string for precision
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultTimeseriesResponse {
+    pub metric: String,
+    pub timeframe: String,
+    pub points: Vec<TimeseriesPoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultKpisResponse {
+    pub cumulative_pnl_usd: String,
+    pub max_drawdown_pct: f64,
+    pub sharpe: f64,
+    pub profit_share_bps: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultLiquidityResponse {
+    pub as_of: Option<String>,
+    pub is_liquid: bool,
+    pub withdraw_capacity_usd_24h: String,
+    pub deposit_capacity_usd_24h: String,
+    pub policy_markdown: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SlippagePoint {
+    pub amount_usd: String,
+    pub slippage_bps: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultSlippageCurveResponse {
+    pub is_liquid: bool,
+    pub points: Vec<SlippagePoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct LiquiditySimulateRequest {
+    pub amount: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct InstantLiquidity {
+    pub supported: bool,
+    pub est_slippage_bps: u32,
+    pub cap_remaining: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ScheduledWindow {
+    pub window: String,
+    pub max_without_delay: Option<String>,
+    pub expected_nav_date: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct LiquiditySimulateResponse {
+    pub amount: String,
+    pub instant: Option<InstantLiquidity>,
+    pub scheduled: Vec<ScheduledWindow>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AprBasis {
+    Nominal,
+    InflationAdjusted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultAprSummaryResponse {
+    pub apr_pct: f64,
+    pub apr_basis: AprBasis,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AprPoint {
+    pub t: String,    // RFC3339 timestamp
+    pub apr_pct: f64, // APR in percent
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultAprSeriesResponse {
+    pub timeframe: String,
+    pub points: Vec<AprPoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum GroupBy {
+    Platform,
+    Asset,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct CompositionPosition {
+    pub platform: String,
+    pub asset: String,
+    pub symbol: String,
+    pub pct: f64,
+    pub apy_est_pct: f64,
+    pub icon: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultCompositionResponse {
+    pub as_of: String,
+    pub positions: Vec<CompositionPosition>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct CompositionSeriesPoint {
+    pub t: String,             // RFC3339 timestamp
+    pub weights_pct: Vec<f64>, // Weight percentages matching labels order
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultCompositionSeriesResponse {
+    pub timeframe: String,
+    pub group_by: String,
+    pub labels: Vec<String>,
+    pub points: Vec<CompositionSeriesPoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct CapItem {
+    pub name: String,
+    pub current: f64,
+    pub limit: f64,
+    pub unit: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultCapsResponse {
+    pub items: Vec<CapItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultNavLatestResponse {
+    pub date: String,
+    pub aum: String,
+    pub var_since_prev_pct: f64,
+    pub apr_since_prev_pct: f64,
+    pub report_url: String,
+}
+
 impl From<pragma_db::models::Vault> for Vault {
     fn from(vault: pragma_db::models::Vault) -> Self {
         Self {

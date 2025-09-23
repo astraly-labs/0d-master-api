@@ -7,7 +7,7 @@ use starknet::core::types::Felt;
 use std::time::Duration;
 use task_supervisor::SupervisorBuilder;
 
-use crate::vaults::{extended::ExtendedVault, state::VaultState};
+use crate::vaults::{starknet::StarknetIndexer, state::VaultState};
 
 pub struct IndexerService {
     db_pool: Pool,
@@ -45,11 +45,15 @@ impl IndexerService {
         for vault in vaults {
             supervisor = supervisor.with_task(
                 &vault.id,
-                ExtendedVault {
+                StarknetIndexer {
                     vault_id: vault.id.clone(),
                     vault_address: Felt::from_hex(&vault.contract_address).unwrap(),
                     apibara_api_key: self.apibara_api_key.clone(),
-                    state: VaultState::new(vault.start_block as u64, self.db_pool.clone()),
+                    state: VaultState::new(
+                        vault.id.clone(),
+                        vault.start_block as u64,
+                        self.db_pool.clone(),
+                    ),
                 },
             );
         }

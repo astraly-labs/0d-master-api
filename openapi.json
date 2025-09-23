@@ -61,6 +61,82 @@
         }
       }
     },
+    "/users/{address}/vaults/{vault_id}/historical": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "operationId": "get_historical_user_performance",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "User wallet address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "description": "User performance metric to return",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PerformanceMetric"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "description": "Time period for data",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Timeframe"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "description": "Display currency",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DisplayCurrency"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historical User performance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalUserPerformance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "404": {
+            "description": "User or vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/users/{address}/vaults/{vault_id}/kpis": {
       "get": {
         "tags": [
@@ -287,6 +363,464 @@
         }
       }
     },
+    "/vaults/{vault_id}/apr/series": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_apr_series",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "description": "Time period for APR series",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "7d"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historical APR data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultAprSeriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/apr/summary": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_apr_summary",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apr_basis",
+            "in": "query",
+            "description": "APR calculation basis",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "nominal"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "APR summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultAprSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/caps": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_caps",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current values vs configured limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultCapsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/composition": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_composition",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "description": "Aggregate by platform or asset",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "platform"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current vault composition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultCompositionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/composition/series": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_composition_series",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "description": "Time period for composition series",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "30d"
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "description": "Group by platform or asset",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "platform"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historical composition data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultCompositionSeriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/kpis": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_kpis",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "description": "Time period for KPI calculation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "all"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vault performance KPIs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultKpisResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/liquidity": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_liquidity",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vault liquidity summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultLiquidityResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/liquidity/curve": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_slippage_curve",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vault slippage curve",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultSlippageCurveResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/liquidity/simulate": {
+      "post": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "simulate_vault_liquidity",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiquiditySimulateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Liquidity simulation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiquiditySimulateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/nav/latest": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_nav_latest",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest NAV report & deltas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultNavLatestResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/vaults/{vault_id}/stats": {
       "get": {
         "tags": [
@@ -323,10 +857,182 @@
           }
         }
       }
+    },
+    "/vaults/{vault_id}/timeseries": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "get_vault_timeseries",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "description": "Vault-level metric to return",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tvl"
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "description": "Time period",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "7d"
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "description": "Currency for values",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "USD"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vault timeseries data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultTimeseriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AprBasis": {
+        "type": "string",
+        "enum": [
+          "nominal",
+          "inflation_adjusted"
+        ]
+      },
+      "AprPoint": {
+        "type": "object",
+        "required": [
+          "t",
+          "apr_pct"
+        ],
+        "properties": {
+          "apr_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "t": {
+            "type": "string"
+          }
+        }
+      },
+      "CapItem": {
+        "type": "object",
+        "required": [
+          "name",
+          "current",
+          "limit",
+          "unit"
+        ],
+        "properties": {
+          "current": {
+            "type": "number",
+            "format": "double"
+          },
+          "limit": {
+            "type": "number",
+            "format": "double"
+          },
+          "name": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          }
+        }
+      },
+      "CompositionPosition": {
+        "type": "object",
+        "required": [
+          "platform",
+          "asset",
+          "symbol",
+          "pct",
+          "apy_est_pct"
+        ],
+        "properties": {
+          "apy_est_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "asset": {
+            "type": "string"
+          },
+          "icon": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          }
+        }
+      },
+      "CompositionSeriesPoint": {
+        "type": "object",
+        "required": [
+          "t",
+          "weights_pct"
+        ],
+        "properties": {
+          "t": {
+            "type": "string"
+          },
+          "weights_pct": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        }
+      },
       "Contract": {
         "type": "object",
         "required": [
@@ -368,6 +1074,51 @@
           "usdc"
         ]
       },
+      "GroupBy": {
+        "type": "string",
+        "enum": [
+          "platform",
+          "asset"
+        ]
+      },
+      "HistoricalDataPoint": {
+        "type": "object",
+        "required": [
+          "t",
+          "v"
+        ],
+        "properties": {
+          "t": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "v": {
+            "type": "string"
+          }
+        }
+      },
+      "HistoricalUserPerformance": {
+        "type": "object",
+        "required": [
+          "metric",
+          "timeframe",
+          "points"
+        ],
+        "properties": {
+          "metric": {
+            "$ref": "#/components/schemas/PerformanceMetric"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoricalDataPoint"
+            }
+          },
+          "timeframe": {
+            "$ref": "#/components/schemas/Timeframe"
+          }
+        }
+      },
       "Icons": {
         "type": "object",
         "properties": {
@@ -385,11 +1136,164 @@
           }
         }
       },
+      "InstantLiquidity": {
+        "type": "object",
+        "required": [
+          "supported",
+          "est_slippage_bps",
+          "cap_remaining"
+        ],
+        "properties": {
+          "cap_remaining": {
+            "type": "string"
+          },
+          "est_slippage_bps": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "supported": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LiquiditySimulateRequest": {
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string"
+          }
+        }
+      },
+      "LiquiditySimulateResponse": {
+        "type": "object",
+        "required": [
+          "amount",
+          "scheduled"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "instant": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InstantLiquidity"
+              }
+            ]
+          },
+          "scheduled": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledWindow"
+            }
+          }
+        }
+      },
+      "PerformanceMetric": {
+        "type": "string",
+        "enum": [
+          "all_time_pnl",
+          "unrealized_pnl",
+          "realized_pnl"
+        ]
+      },
       "ResponseStatus": {
         "type": "string",
         "enum": [
           "ok",
           "error"
+        ]
+      },
+      "ScheduledWindow": {
+        "type": "object",
+        "required": [
+          "window",
+          "expected_nav_date"
+        ],
+        "properties": {
+          "expected_nav_date": {
+            "type": "string"
+          },
+          "max_without_delay": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "window": {
+            "type": "string"
+          }
+        }
+      },
+      "SlippagePoint": {
+        "type": "object",
+        "required": [
+          "amount_usd",
+          "slippage_bps"
+        ],
+        "properties": {
+          "amount_usd": {
+            "type": "string"
+          },
+          "slippage_bps": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "Timeframe": {
+        "type": "string",
+        "enum": [
+          "7d",
+          "30d",
+          "1y",
+          "all"
+        ]
+      },
+      "TimeseriesCurrency": {
+        "type": "string",
+        "enum": [
+          "USD",
+          "USDC"
+        ]
+      },
+      "TimeseriesMetric": {
+        "type": "string",
+        "enum": [
+          "tvl",
+          "pnl"
+        ]
+      },
+      "TimeseriesPoint": {
+        "type": "object",
+        "required": [
+          "t",
+          "v"
+        ],
+        "properties": {
+          "t": {
+            "type": "string"
+          },
+          "v": {
+            "type": "string"
+          }
+        }
+      },
+      "TimeseriesTimeframe": {
+        "type": "string",
+        "enum": [
+          "7d",
+          "30d",
+          "1y",
+          "all"
         ]
       },
       "TransactionStatus": {
@@ -668,6 +1572,159 @@
           }
         }
       },
+      "VaultAprSeriesResponse": {
+        "type": "object",
+        "required": [
+          "timeframe",
+          "points"
+        ],
+        "properties": {
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AprPoint"
+            }
+          },
+          "timeframe": {
+            "type": "string"
+          }
+        }
+      },
+      "VaultAprSummaryResponse": {
+        "type": "object",
+        "required": [
+          "apr_pct",
+          "apr_basis"
+        ],
+        "properties": {
+          "apr_basis": {
+            "$ref": "#/components/schemas/AprBasis"
+          },
+          "apr_pct": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "VaultCapsResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CapItem"
+            }
+          }
+        }
+      },
+      "VaultCompositionResponse": {
+        "type": "object",
+        "required": [
+          "as_of",
+          "positions"
+        ],
+        "properties": {
+          "as_of": {
+            "type": "string"
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompositionPosition"
+            }
+          }
+        }
+      },
+      "VaultCompositionSeriesResponse": {
+        "type": "object",
+        "required": [
+          "timeframe",
+          "group_by",
+          "labels",
+          "points"
+        ],
+        "properties": {
+          "group_by": {
+            "type": "string"
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompositionSeriesPoint"
+            }
+          },
+          "timeframe": {
+            "type": "string"
+          }
+        }
+      },
+      "VaultKpisResponse": {
+        "type": "object",
+        "required": [
+          "cumulative_pnl_usd",
+          "max_drawdown_pct",
+          "sharpe",
+          "profit_share_bps"
+        ],
+        "properties": {
+          "cumulative_pnl_usd": {
+            "type": "string"
+          },
+          "max_drawdown_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "profit_share_bps": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "sharpe": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "VaultLiquidityResponse": {
+        "type": "object",
+        "required": [
+          "is_liquid",
+          "withdraw_capacity_usd_24h",
+          "deposit_capacity_usd_24h"
+        ],
+        "properties": {
+          "as_of": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deposit_capacity_usd_24h": {
+            "type": "string"
+          },
+          "is_liquid": {
+            "type": "boolean"
+          },
+          "policy_markdown": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "withdraw_capacity_usd_24h": {
+            "type": "string"
+          }
+        }
+      },
       "VaultListItem": {
         "type": "object",
         "required": [
@@ -716,6 +1773,35 @@
             "items": {
               "$ref": "#/components/schemas/VaultListItem"
             }
+          }
+        }
+      },
+      "VaultNavLatestResponse": {
+        "type": "object",
+        "required": [
+          "date",
+          "aum",
+          "var_since_prev_pct",
+          "apr_since_prev_pct",
+          "report_url"
+        ],
+        "properties": {
+          "apr_since_prev_pct": {
+            "type": "number",
+            "format": "double"
+          },
+          "aum": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "report_url": {
+            "type": "string"
+          },
+          "var_since_prev_pct": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -775,6 +1861,24 @@
           }
         }
       },
+      "VaultSlippageCurveResponse": {
+        "type": "object",
+        "required": [
+          "is_liquid",
+          "points"
+        ],
+        "properties": {
+          "is_liquid": {
+            "type": "boolean"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlippagePoint"
+            }
+          }
+        }
+      },
       "VaultStats": {
         "type": "object",
         "required": [
@@ -787,6 +1891,28 @@
             "format": "double"
           },
           "tvl": {
+            "type": "string"
+          }
+        }
+      },
+      "VaultTimeseriesResponse": {
+        "type": "object",
+        "required": [
+          "metric",
+          "timeframe",
+          "points"
+        ],
+        "properties": {
+          "metric": {
+            "type": "string"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeseriesPoint"
+            }
+          },
+          "timeframe": {
             "type": "string"
           }
         }

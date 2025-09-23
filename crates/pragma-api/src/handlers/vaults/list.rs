@@ -42,6 +42,7 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
     let mut items = Vec::with_capacity(vaults.len());
     for vault in vaults {
         let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+
         let tvl = if let Ok(p) = client.get_vault_stats().await {
             p.tvl
         } else {

@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use chrono::{DateTime, Utc};
 use evian::contracts::starknet::vault::data::indexer::events::{
-    DepositEvent, RedeemRequestedEvent, VaultAddress, VaultEvent,
+    DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, VaultAddress, VaultEvent,
 };
 use evian::{
     contracts::starknet::vault::StarknetVaultIndexer, utils::indexer::handler::OutputEvent,
@@ -21,7 +21,7 @@ use crate::vaults::helpers::felt_to_hex_str;
 use crate::vaults::state::VaultState;
 
 #[derive(Clone)]
-pub struct ExtendedVault {
+pub struct StarknetIndexer {
     pub apibara_api_key: String,
     pub vault_address: Felt,
     pub vault_id: String,
@@ -29,7 +29,7 @@ pub struct ExtendedVault {
 }
 
 #[async_trait::async_trait]
-impl SupervisedTask for ExtendedVault {
+impl SupervisedTask for StarknetIndexer {
     async fn run(&mut self) -> Result<(), TaskError> {
         // Validate that the vault exists before starting
         self.vault_exists().await?;
@@ -48,7 +48,8 @@ impl SupervisedTask for ExtendedVault {
 
         let (mut event_receiver, mut vault_handle) = vault_indexer.start().await?;
         tracing::info!(
-            "[ExtendedVault] 🔌 Connected to the on-chain Vault! (from block {})",
+            "[StarknetIndexer] 🔌 Connected to the on-chain Vault({})! (from block {})",
+            self.vault_id,
             self.state.current_block
         );
 
@@ -61,10 +62,10 @@ impl SupervisedTask for ExtendedVault {
                             header.map_or_else(|| todo!(), |h| (h.block_number, h.timestamp));
 
                             let block_timestamp = DateTime::from_timestamp_secs(block_timestamp).unwrap_or_else(|| {
-                                panic!("[ExtendedVault] ❌ Invalid timestamp for block {block_number}")
+                                panic!("[StarknetIndexer] ❌ Invalid timestamp for block {block_number}")
                             });
 
-                            let tx_hash = tx_hash.map(felt_to_hex_str).expect("[ExtendedVault] ❌ Invalid transaction hash");
+                            let tx_hash = tx_hash.map(felt_to_hex_str).expect("[StarknetIndexer] ❌ Invalid transaction hash");
 
                             if let Err(e) = self.handle_event(block_number, block_timestamp, event, tx_hash).await {
                                 self.state.record_indexer_state_error(&self.vault_id, e.to_string()).await?;
@@ -77,7 +78,7 @@ impl SupervisedTask for ExtendedVault {
                             self.state.update_indexer_state(&self.vault_id, block_number, block_timestamp).await?;
                         }
                         OutputEvent::Synced => {
-                            tracing::info!("[ExtendedVault] 🥳 Indexer reached the tip of the chain!");
+                            tracing::info!("[StarknetIndexer] 🥳 Vault({}) reached the tip of the chain!", self.vault_id);
                             // TODO: Should we flag as synced?
                         }
                         // NOTE: Never happens for now. See later when apibara upgrades?
@@ -94,7 +95,7 @@ impl SupervisedTask for ExtendedVault {
     }
 }
 
-impl ExtendedVault {
+impl StarknetIndexer {
     async fn handle_event(
         &self,
         block_number: u64,
@@ -109,6 +110,10 @@ impl ExtendedVault {
             }
             VaultEvent::RedeemRequested(redeem) => {
                 self.handle_redeem_requested_event(redeem, tx_hash, block_number, block_timestamp)
+                    .await?;
+            }
+            VaultEvent::RedeemClaimed(claim) => {
+                self.handle_redeem_claimed_event(claim, tx_hash, block_number, block_timestamp)
                     .await?;
             }
             #[allow(clippy::match_same_arms)]
@@ -132,7 +137,7 @@ impl ExtendedVault {
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
-        //tracing::info!("[ExtendedVault] 💰 Handling deposit event with hash: {tx_hash}");
+        //tracing::info!("[StartknetIndexer] 💰 Handling deposit event with hash: {tx_hash}");
 
         let user_address = felt_to_hex_str(deposit.owner);
         self.ensure_user_exists(user_address.clone()).await?;
@@ -145,7 +150,7 @@ impl ExtendedVault {
         };
 
         tracing::info!(
-            "[ExtendedVault] 💰 Deposit event with hash: {tx_hash} [share_price: {share_price:?}]"
+            "[StartknetIndexer] 💰 Deposit event with hash: {tx_hash} [share_price: {share_price:?}]"
         );
 
         // Check if transaction already exists to avoid duplicates
@@ -156,12 +161,12 @@ impl ExtendedVault {
                 move |conn| UserTransaction::exists_by_hash(&tx_hash_check, conn)
             })
             .await
-            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?
+            .map_err(|e| anyhow::anyhow!("[StartknetIndexer] 🗃️ Database interaction failed: {e}"))?
             .map_err(anyhow::Error::from)?;
 
         if tx_exists {
             tracing::info!(
-                "[ExtendedVault] ⏭️  Skipping duplicate deposit transaction: {} (block: {})",
+                "[StartknetIndexer] ⏭️  Skipping duplicate deposit transaction: {} (block: {})",
                 tx_hash,
                 block_number
             );
@@ -172,7 +177,7 @@ impl ExtendedVault {
             tx_hash,
             block_number: block_number
                 .try_into()
-                .expect("[ExtendedVault] 🌯 Block number too large for i64"),
+                .expect("[StartknetIndexer] 🌯 Block number too large for i64"),
             block_timestamp,
             user_address: user_address.clone(),
             vault_id: self.vault_id.clone(),
@@ -275,12 +280,12 @@ impl ExtendedVault {
             tx_hash,
             block_number: block_number
                 .try_into()
-                .expect("[ExtendedVault] 🌯 Block number too large for i64"),
+                .expect("[StartknetIndexer] 🌯 Block number too large for i64"),
             block_timestamp,
             user_address: user_address.clone(),
             vault_id: self.vault_id.clone(),
             type_: TransactionType::Withdraw.as_str().to_string(),
-            status: TransactionStatus::Confirmed.as_str().to_string(), // TODO: Change to Confirmed only when the redeem is completed?
+            status: TransactionStatus::Pending.as_str().to_string(),
             amount: redeem.assets,
             shares_amount: Some(redeem.shares),
             share_price,
@@ -296,7 +301,7 @@ impl ExtendedVault {
         let conn = self.state.db_pool.get().await?;
         conn.interact(move |conn| UserTransaction::create(&new_transaction, conn))
             .await
-            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Transaction creation failed: {e}"))?
+            .map_err(|e| anyhow::anyhow!("[StartknetIndexer] 🗃️ Transaction creation failed: {e}"))?
             .map_err(anyhow::Error::from)?;
 
         // Second database operation: Update user position
@@ -317,7 +322,7 @@ impl ExtendedVault {
 
                     let updates = UserPositionUpdate {
                         share_balance: Some(new_share_balance),
-                        cost_basis: None, // TODO: Update the cost basis when redeem is completed?
+                        cost_basis: None,
                         last_activity_at: Some(block_timestamp),
                         updated_at: Some(Utc::now()),
                     };
@@ -336,8 +341,120 @@ impl ExtendedVault {
             }
         })
         .await
-        .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Position update failed: {e}"))?
+        .map_err(|e| anyhow::anyhow!("[StartknetIndexer] 🗃️ Position update failed: {e}"))?
         .map_err(anyhow::Error::from)?;
+
+        Ok(())
+    }
+
+    async fn handle_redeem_claimed_event(
+        &self,
+        redeem_claimed: RedeemClaimedEvent,
+        tx_hash: String,
+        _block_number: u64,
+        block_timestamp: DateTime<Utc>,
+    ) -> Result<(), anyhow::Error> {
+        tracing::info!("[StartknetIndexer] ✅ Handling redeem claimed event with hash: {tx_hash}");
+
+        let user_address = felt_to_hex_str(redeem_claimed.receiver);
+        self.ensure_user_exists(user_address.clone()).await?;
+
+        // First, find the original pending redeem transaction by redeem_id
+        let conn = self.state.db_pool.get().await?;
+        let redeem_id = redeem_claimed.id.to_string();
+        let vault_id = self.vault_id.clone();
+
+        let pending_transaction = conn
+            .interact({
+                let user_addr = user_address.clone();
+                let vault_id_check = vault_id.clone();
+                let redeem_id_check = redeem_id.clone();
+                move |conn| {
+                    UserTransaction::find_pending_redeem_by_id(
+                        &user_addr,
+                        &vault_id_check,
+                        &redeem_id_check,
+                        conn,
+                    )
+                }
+            })
+            .await
+            .map_err(|e| {
+                anyhow::anyhow!("[StartknetIndexer] 🗃️ Database interaction failed: {e}")
+            })?;
+
+        match pending_transaction {
+            Ok(transaction) => {
+                // Update the original pending transaction to confirmed status
+                let conn = self.state.db_pool.get().await?;
+                conn.interact({
+                    let tx_id = transaction.id;
+                    let new_status = TransactionStatus::Confirmed.as_str().to_string();
+                    let actual_amount = redeem_claimed.assets;
+                    let new_tx_hash = tx_hash.clone();
+                    move |conn| {
+                        UserTransaction::update_status_and_amount(
+                            tx_id,
+                            &new_status,
+                            actual_amount,
+                            &new_tx_hash,
+                            conn,
+                        )
+                    }
+                })
+                .await
+                .map_err(|e| {
+                    anyhow::anyhow!("[StartknetIndexer] 🗃️ Transaction update failed: {e}")
+                })?
+                .map_err(anyhow::Error::from)?;
+
+                // Update user position cost_basis to reflect the confirmed redemption
+                let conn = self.state.db_pool.get().await?;
+                let user_addr_for_position = user_address.clone();
+                let vault_id_for_position = vault_id.clone();
+                let redeem_nominal = redeem_claimed.redeem_request_nominal;
+                let block_ts = block_timestamp;
+                conn.interact(move |conn| {
+                    match UserPosition::find_by_user_and_vault(
+                        &user_addr_for_position,
+                        &vault_id_for_position,
+                        conn,
+                    ) {
+                        Ok(position) => {
+                            // Calculate the proportion of shares redeemed vs total shares
+                            let total_shares_before = position.share_balance + redeem_nominal;
+                            let redemption_ratio = if total_shares_before > Decimal::ZERO {
+                                redeem_nominal / total_shares_before
+                            } else {
+                                Decimal::ZERO
+                            };
+
+                            // Reduce cost_basis proportionally
+                            let cost_basis_reduction = position.cost_basis * redemption_ratio;
+                            let new_cost_basis = position.cost_basis - cost_basis_reduction;
+
+                            let updates = UserPositionUpdate {
+                                share_balance: None, // Already updated in redeem_requested
+                                cost_basis: Some(new_cost_basis),
+                                last_activity_at: Some(block_ts),
+                                updated_at: Some(Utc::now()),
+                            };
+
+                            position.update(&updates, conn)
+                        }
+                        Err(e) => Err(e),
+                    }
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("[StartknetIndexer] 🗃️ Position update failed: {e}"))?
+                .map_err(anyhow::Error::from)?;
+            }
+            Err(e) => {
+                return Err(anyhow::anyhow!(
+                    "[StartknetIndexer] 🗃️ Database error finding pending redeem: {e}"
+                ));
+            }
+        }
 
         Ok(())
     }
@@ -350,12 +467,14 @@ impl ExtendedVault {
         let result = conn
             .interact(move |conn| Vault::find_by_id(&vault_id, conn))
             .await
-            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?;
+            .map_err(|e| {
+                anyhow::anyhow!("[StartknetIndexer] 🗃️ Database interaction failed: {e}")
+            })?;
 
         match result {
             Ok(vault) => {
                 tracing::info!(
-                    "[ExtendedVault] 🔎 Vault exists in database with name({}) and id({})",
+                    "[StartknetIndexer] 🔎 Vault exists in database with name({}) and id({})",
                     vault.name,
                     vault.id
                 );
@@ -363,13 +482,13 @@ impl ExtendedVault {
             }
             Err(diesel::result::Error::NotFound) => {
                 anyhow::bail!(
-                    "[ExtendedVault] ❌ Vault with ID '{}' not found in database.\n\
+                    "[StartknetIndexer] ❌ Vault with ID '{}' not found in database.\n\
                     To fix this error, create the vault record in the database.",
                     self.vault_id
                 );
             }
             Err(e) => {
-                anyhow::bail!("[ExtendedVault] 🗃️ Database error while checking vault: {e}");
+                anyhow::bail!("[StartknetIndexer] 🗃️ Database error while checking vault: {e}");
             }
         }
     }
@@ -382,7 +501,7 @@ impl ExtendedVault {
             User::find_or_create(&user_address, pragma_common::web3::Chain::Starknet, conn)
         })
         .await
-        .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?
+        .map_err(|e| anyhow::anyhow!("[StartknetIndexer] 🗃️ Database interaction failed: {e}"))?
         .map_err(anyhow::Error::from)?;
 
         Ok(())

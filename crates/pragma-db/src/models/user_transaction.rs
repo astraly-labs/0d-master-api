@@ -411,4 +411,54 @@ impl UserTransaction {
             }
         }
     }
+
+    /// Find pending redeem transaction by `redeem_id` from metadata
+    pub fn find_pending_redeem_by_id(
+        user_address: &str,
+        vault_id: &str,
+        redeem_id: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Self> {
+        use diesel::prelude::*;
+
+        user_transactions::table
+            .filter(user_transactions::user_address.eq(user_address))
+            .filter(user_transactions::vault_id.eq(vault_id))
+            .filter(user_transactions::type_.eq(TransactionType::Withdraw.as_str()))
+            .filter(user_transactions::status.eq(TransactionStatus::Pending.as_str()))
+            .filter(user_transactions::metadata.is_not_null())
+            .load::<Self>(conn)?
+            .into_iter()
+            .find(|tx| {
+                if let Some(metadata) = &tx.metadata
+                    && let Some(id) = metadata.get("redeem_id")
+                    && let Some(id_str) = id.as_str()
+                {
+                    return id_str == redeem_id;
+                }
+
+                false
+            })
+            .ok_or(diesel::result::Error::NotFound)
+    }
+
+    /// Update transaction status and amount with new transaction hash
+    pub fn update_status_and_amount(
+        id: i32,
+        status: &str,
+        amount: Decimal,
+        tx_hash: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Self> {
+        use diesel::prelude::*;
+
+        diesel::update(user_transactions::table.find(id))
+            .set((
+                user_transactions::status.eq(status),
+                user_transactions::amount.eq(amount),
+                user_transactions::tx_hash.eq(tx_hash),
+                user_transactions::updated_at.eq(Utc::now()),
+            ))
+            .get_result(conn)
+    }
 }

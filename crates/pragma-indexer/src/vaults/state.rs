@@ -4,14 +4,16 @@ use pragma_db::models::indexer_state::{IndexerState, IndexerStatus, NewIndexerSt
 
 #[derive(Clone)]
 pub struct VaultState {
+    pub vault_id: String,
     pub current_block: u64,
     pub current_timestamp: Option<DateTime<Utc>>,
     pub db_pool: Pool,
 }
 
 impl VaultState {
-    pub const fn new(current_block: u64, db_pool: Pool) -> Self {
+    pub const fn new(vault_id: String, current_block: u64, db_pool: Pool) -> Self {
         Self {
+            vault_id,
             current_block,
             current_timestamp: None,
             db_pool,
@@ -26,7 +28,12 @@ impl VaultState {
         let result = conn
             .interact(move |conn| IndexerState::find_by_vault_id(&vault_id, conn))
             .await
-            .map_err(|e| anyhow::anyhow!("[VaultState] 🗃️ Database interaction failed: {e}"))?;
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "[VaultState({})] 🗃️ Database interaction failed: {e}",
+                    self.vault_id
+                )
+            })?;
 
         match result {
             Ok(state) => {
@@ -34,7 +41,8 @@ impl VaultState {
                     // If there was an error previously, start from the same block to retry
                     self.current_block = state.last_processed_block as u64;
                     tracing::warn!(
-                        "[VaultState] ⚠️ Previous error detected, retrying from block {} (last error: {})",
+                        "[VaultState({})] ⚠️ Previous error detected, retrying from block {} (last error: {})",
+                        self.vault_id,
                         self.current_block,
                         state.last_error.as_deref().unwrap_or("unknown error")
                     );
@@ -42,7 +50,8 @@ impl VaultState {
                     // Resume from the last processed block + 1
                     self.current_block = (state.last_processed_block + 1) as u64;
                     tracing::info!(
-                        "[VaultState] 📍 Resuming from block {} (last processed: {})",
+                        "[VaultState({})] 📍 Resuming from block {} (last processed: {})",
+                        self.vault_id,
                         self.current_block,
                         state.last_processed_block
                     );
@@ -51,7 +60,8 @@ impl VaultState {
             Err(diesel::result::Error::NotFound) => {
                 // No previous state found, start from the configured block
                 tracing::info!(
-                    "[VaultState] 🆕 No previous state found, starting from block {}",
+                    "[VaultState({})] 🆕 No previous state found, starting from block {}",
+                    self.vault_id,
                     self.current_block
                 );
             }
@@ -107,7 +117,12 @@ impl VaultState {
             )
         })
         .await
-        .map_err(|e| anyhow::anyhow!("[VaultState] 🗃️ Indexer state update failed: {e}"))?
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "[VaultState({})] 🗃️ Indexer state update failed: {e}",
+                self.vault_id
+            )
+        })?
         .map_err(anyhow::Error::from)?;
 
         Ok(())
@@ -145,7 +160,12 @@ impl VaultState {
             }
         })
         .await
-        .map_err(|e| anyhow::anyhow!("[VaultState] 🗃️ Error recording failed: {e}"))?
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "[VaultState({})] 🗃️ Error recording failed: {e}",
+                self.vault_id
+            )
+        })?
         .map_err(anyhow::Error::from)?;
 
         Ok(())

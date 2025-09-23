@@ -1,7 +1,7 @@
 use axum::Router;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{get, post};
 
 use utoipa::OpenApi as OpenApiT;
 use utoipa_swagger_ui::SwaggerUi;
@@ -14,7 +14,30 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
     let vaults_router = Router::new()
         .route("/", get(handlers::list_vaults))
         .route("/{vault_id}", get(handlers::get_vault))
-        .route("/{vault_id}/stats", get(handlers::get_vault_stats));
+        .route("/{vault_id}/stats", get(handlers::get_vault_stats))
+        .route(
+            "/{vault_id}/timeseries",
+            get(handlers::get_vault_timeseries),
+        )
+        .route("/{vault_id}/kpis", get(handlers::get_vault_kpis))
+        .route("/{vault_id}/liquidity", get(handlers::get_vault_liquidity))
+        .route(
+            "/{vault_id}/liquidity/curve",
+            get(handlers::get_vault_slippage_curve),
+        )
+        .route(
+            "/{vault_id}/liquidity/simulate",
+            post(handlers::simulate_vault_liquidity),
+        )
+        .route("/{vault_id}/apr/summary", get(handlers::get_vault_apr_summary))
+        .route("/{vault_id}/apr/series", get(handlers::get_vault_apr_series))
+        .route("/{vault_id}/composition", get(handlers::get_vault_composition))
+        .route(
+            "/{vault_id}/composition/series",
+            get(handlers::get_vault_composition_series),
+        )
+        .route("/{vault_id}/caps", get(handlers::get_vault_caps))
+        .route("/{vault_id}/nav/latest", get(handlers::get_vault_nav_latest));
 
     // Group user-related endpoints under a dedicated "/users" router
     let users_router = Router::new()

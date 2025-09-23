@@ -5,10 +5,10 @@ use rust_decimal::Decimal;
 use std::time::Duration;
 
 use crate::{
-    calculate_max_drawdown, calculate_sharpe_ratio, calculate_sortino_ratio, calculate_user_kpis,
+    calculate_max_drawdown, calculate_sharpe_ratio, calculate_sortino_ratio, calculate_user_pnl,
 };
 use pragma_db::models::{
-    NewUserKpi, TransactionType, UserKpi, UserKpiUpdate, UserPosition, UserTransaction, Vault,
+    TransactionType, UserKpi, UserKpiUpdate, UserPosition, UserTransaction, Vault,
 };
 
 pub struct KpiService {
@@ -100,6 +100,12 @@ impl KpiService {
             }
         }
 
+        tracing::info!(
+            "[KpiService] ✅ Completed KPI calculation for vault {}: {} users updated",
+            vault.id,
+            updated_count
+        );
+
         Ok(updated_count)
     }
 
@@ -115,8 +121,8 @@ impl KpiService {
             .get_user_vault_transactions(&position.user_address, vault_id)
             .await?;
 
-        // Calculate basic KPIs (PnL, deposits, withdrawals, fees)
-        let basic_kpis = calculate_user_kpis(position, &transactions, current_share_price)?;
+        // Calculate PnL
+        let pnl_result = calculate_user_pnl(position, &transactions, current_share_price)?;
 
         // Get historical portfolio data for risk metrics
         let portfolio_history = self
@@ -140,9 +146,9 @@ impl KpiService {
 
         // Create comprehensive KPI update
         let kpi_update = UserKpiUpdate {
-            all_time_pnl: Some(basic_kpis.all_time_pnl),
-            unrealized_pnl: Some(basic_kpis.unrealized_pnl),
-            realized_pnl: Some(basic_kpis.realized_pnl),
+            all_time_pnl: Some(pnl_result.all_time_pnl),
+            unrealized_pnl: Some(pnl_result.unrealized_pnl),
+            realized_pnl: Some(pnl_result.realized_pnl),
             max_drawdown_pct: Some(max_drawdown_pct),
             sharpe_ratio: Some(sharpe_ratio),
             sortino_ratio: Some(sortino_ratio),
@@ -269,7 +275,7 @@ impl KpiService {
         Ok(transactions)
     }
 
-    /// Insert new daily user KPI record (creates historical records for portfolio analysis)
+    /// Insert or update daily user KPI record (upserts to handle multiple runs per day)
     async fn insert_daily_user_kpis(
         &self,
         user_address: &str,
@@ -281,28 +287,11 @@ impl KpiService {
         let vault_id = vault_id.to_string();
         let kpi_data = kpi_data.clone();
 
-        conn.interact(move |conn| {
-            let new_kpi = NewUserKpi {
-                user_address,
-                vault_id,
-                all_time_pnl: kpi_data.all_time_pnl,
-                unrealized_pnl: kpi_data.unrealized_pnl,
-                realized_pnl: kpi_data.realized_pnl,
-                max_drawdown_pct: kpi_data.max_drawdown_pct,
-                sharpe_ratio: kpi_data.sharpe_ratio,
-                sortino_ratio: kpi_data.sortino_ratio,
-                total_deposits: kpi_data.total_deposits,
-                total_withdrawals: kpi_data.total_withdrawals,
-                total_fees_paid: kpi_data.total_fees_paid,
-                calculated_at: kpi_data.calculated_at,
-                share_price_used: kpi_data.share_price_used,
-                share_balance: kpi_data.share_balance,
-            };
-
-            UserKpi::create(&new_kpi, conn)
-        })
-        .await
-        .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e))??;
+        conn.interact(move |conn| UserKpi::upsert(&user_address, &vault_id, &kpi_data, conn))
+            .await
+            .map_err(|e| {
+                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
+            })??;
 
         Ok(())
     }
@@ -325,31 +314,81 @@ impl KpiService {
         Ok(position)
     }
 
-    /// Fetch vault share price and convert to Decimal
+    /// Get vault information for monitoring and debugging
+    pub async fn get_vault_info(&self) -> Result<Vec<(String, String, String, String)>> {
+        let vaults = self.get_active_vaults().await?;
+
+        let vault_info = vaults
+            .into_iter()
+            .map(|vault| (vault.id, vault.name, vault.symbol, vault.api_endpoint))
+            .collect();
+
+        Ok(vault_info)
+    }
+
+    /// Verify vault API connectivity for all vaults
+    pub async fn check_vault_connectivity(&self) -> Result<Vec<(String, bool, Option<String>)>> {
+        let vaults = self.get_active_vaults().await?;
+        let mut results = Vec::new();
+
+        for vault in vaults {
+            match Self::fetch_vault_share_price(&vault).await {
+                Ok(price) => {
+                    results.push((
+                        vault.id.clone(),
+                        true,
+                        Some(format!("Share price: {price}",)),
+                    ));
+                }
+                Err(e) => {
+                    results.push((vault.id.clone(), false, Some(e.to_string())));
+                }
+            }
+        }
+
+        Ok(results)
+    }
+
+    /// Fetch vault share price using the same endpoints as vault API helpers
     async fn fetch_vault_share_price(vault: &Vault) -> Result<Decimal> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
             .build()?;
 
-        let url = format!("{}/nav/latest", vault.api_endpoint.trim_end_matches('/'));
+        // Properly construct URL - handle endpoints that already include /v1/
+        let base_url = vault.api_endpoint.trim_end_matches('/');
+        let url = if base_url.ends_with("/v1") {
+            format!("{base_url}/vault/info")
+        } else {
+            format!("{base_url}/v1/vault/info")
+        };
+
         let response = client.get(&url).send().await?;
 
         if !response.status().is_success() {
             return Err(anyhow::anyhow!(
-                "[KpiService] 🔴 Vault API returned status: {}",
+                "[KpiService] 🔴 Vault API returned status: {} for URL: {}",
                 response.status(),
+                url
             ));
         }
 
-        let nav_data: serde_json::Value = response.json().await?;
-        let share_price_str = nav_data
-            .get("share_price")
+        let vault_info: serde_json::Value = response.json().await?;
+
+        // Try to get share_price_in_usd (same field as VaultMasterAPIClient)
+        let share_price_str = vault_info
+            .get("share_price_in_usd")
             .and_then(|v| v.as_str())
             .ok_or_else(|| {
-                anyhow::anyhow!("[KpiService] 🔴 Share price not found in vault API response")
+                anyhow::anyhow!(
+                    "[KpiService] 🔴 share_price_in_usd not found in vault API response from {}. Response: {:?}", 
+                    url,
+                    vault_info
+                )
             })?;
 
         let share_price = share_price_str.parse::<Decimal>()?;
+
         Ok(share_price)
     }
 }

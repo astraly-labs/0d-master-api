@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::errors::ApiError;
 
@@ -41,6 +41,66 @@ pub struct AprSeriesDTO {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct TimeseriesPoint {
+    pub t: String, // RFC3339 timestamp
+    pub v: String, // Value as string for precision
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TimeseriesResponseDTO {
+    pub metric: String,
+    pub timeframe: String,
+    pub points: Vec<TimeseriesPoint>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LiquidityDTO {
+    pub as_of: Option<String>,
+    pub is_liquid: bool,
+    pub withdraw_capacity_usd_24h: String,
+    pub deposit_capacity_usd_24h: String,
+    pub policy_markdown: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SlippagePointDTO {
+    pub amount_usd: String,
+    pub slippage_bps: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SlippageCurveDTO {
+    pub is_liquid: bool,
+    pub points: Vec<SlippagePointDTO>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LiquiditySimulateRequestDTO {
+    pub amount: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct InstantLiquidityDTO {
+    pub supported: bool,
+    pub est_slippage_bps: u32,
+    pub cap_remaining: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ScheduledWindowDTO {
+    pub window: String,
+    pub max_without_delay: Option<String>,
+    pub expected_nav_date: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LiquiditySimulateResponseDTO {
+    pub amount: String,
+    pub instant: Option<InstantLiquidityDTO>,
+    pub scheduled: Vec<ScheduledWindowDTO>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CompositionPosition {
     pub platform: String,
     pub asset: String,
@@ -54,6 +114,33 @@ pub struct CompositionPosition {
 pub struct CompositionDTO {
     pub as_of: String,
     pub positions: Vec<CompositionPosition>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CompositionSeriesPointDTO {
+    pub t: String,             // RFC3339 timestamp
+    pub weights_pct: Vec<f64>, // Weight percentages matching labels order
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CompositionSeriesDTO {
+    pub timeframe: String,
+    pub group_by: String,
+    pub labels: Vec<String>,
+    pub points: Vec<CompositionSeriesPointDTO>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CapItemDTO {
+    pub name: String,
+    pub current: f64,
+    pub limit: f64,
+    pub unit: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CapsDTO {
+    pub items: Vec<CapItemDTO>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -130,33 +217,59 @@ impl VaultMasterAPIClient {
         Ok(body)
     }
 
-    pub async fn get_vault_apr_summary(&self) -> anyhow::Result<AprSummaryDTO> {
+    pub async fn get_vault_apr_summary(&self, apr_basis: &str) -> anyhow::Result<AprSummaryDTO> {
         let response = self
             .http_client
-            .get(format!("{}/v1/master/apr/summary", self.api_endpoint))
+            .get(format!(
+                "{}/v1/master/apr/summary?apr_basis={}",
+                self.api_endpoint, apr_basis
+            ))
             .send()
             .await?;
         let body = response.json::<AprSummaryDTO>().await?;
         Ok(body)
     }
 
-    pub async fn get_vault_apr_series(&self) -> anyhow::Result<AprSeriesDTO> {
+    pub async fn get_vault_apr_series(&self, timeframe: &str) -> anyhow::Result<AprSeriesDTO> {
         let response = self
             .http_client
-            .get(format!("{}/v1/master/apr/series", self.api_endpoint))
+            .get(format!(
+                "{}/v1/master/apr/series?timeframe={}",
+                self.api_endpoint, timeframe
+            ))
             .send()
             .await?;
         let body = response.json::<AprSeriesDTO>().await?;
         Ok(body)
     }
 
-    pub async fn get_vault_composition(&self) -> anyhow::Result<CompositionDTO> {
+    pub async fn get_vault_composition(&self, group_by: &str) -> anyhow::Result<CompositionDTO> {
         let response = self
             .http_client
-            .get(format!("{}/v1/master/composition", self.api_endpoint))
+            .get(format!(
+                "{}/v1/master/composition?group_by={}",
+                self.api_endpoint, group_by
+            ))
             .send()
             .await?;
         let body = response.json::<CompositionDTO>().await?;
+        Ok(body)
+    }
+
+    pub async fn get_vault_composition_series(
+        &self,
+        timeframe: &str,
+        group_by: &str,
+    ) -> anyhow::Result<CompositionSeriesDTO> {
+        let response = self
+            .http_client
+            .get(format!(
+                "{}/v1/master/composition/series?timeframe={}&group_by={}",
+                self.api_endpoint, timeframe, group_by
+            ))
+            .send()
+            .await?;
+        let body = response.json::<CompositionSeriesDTO>().await?;
         Ok(body)
     }
 
@@ -170,23 +283,82 @@ impl VaultMasterAPIClient {
         Ok(body)
     }
 
-    pub async fn get_vault_kpis(&self) -> anyhow::Result<KpisDTO> {
+    pub async fn get_vault_caps(&self) -> anyhow::Result<CapsDTO> {
         let response = self
             .http_client
-            .get(format!("{}/v1/master/kpis", self.api_endpoint))
+            .get(format!("{}/v1/master/caps", self.api_endpoint))
             .send()
             .await?;
+        let body = response.json::<CapsDTO>().await?;
+        Ok(body)
+    }
+
+    pub async fn get_vault_kpis(&self, timeframe: &str) -> anyhow::Result<KpisDTO> {
+        let url = format!(
+            "{}/v1/master/kpis?timeframe={}",
+            self.api_endpoint, timeframe
+        );
+        let response = self.http_client.get(&url).send().await?;
         let body = response.json::<KpisDTO>().await?;
         Ok(body)
     }
 
-    pub async fn get_vault_timeseries(&self) -> anyhow::Result<AprSeriesDTO> {
+    pub async fn get_vault_timeseries(
+        &self,
+        metric: &str,
+        timeframe: &str,
+        currency: &str,
+    ) -> anyhow::Result<TimeseriesResponseDTO> {
         let response = self
             .http_client
-            .get(format!("{}/v1/master/timeseries", self.api_endpoint))
+            .get(format!(
+                "{}/v1/master/timeseries?metric={}&timeframe={}&currency={}",
+                self.api_endpoint, metric, timeframe, currency
+            ))
             .send()
             .await?;
-        let body = response.json::<AprSeriesDTO>().await?;
+        let body = response.json::<TimeseriesResponseDTO>().await?;
+        Ok(body)
+    }
+
+    pub async fn get_vault_liquidity(&self) -> anyhow::Result<LiquidityDTO> {
+        let response = self
+            .http_client
+            .get(format!("{}/v1/master/liquidity", self.api_endpoint))
+            .send()
+            .await?;
+        let body = response.json::<LiquidityDTO>().await?;
+        Ok(body)
+    }
+
+    pub async fn get_vault_slippage_curve(&self) -> anyhow::Result<SlippageCurveDTO> {
+        let response = self
+            .http_client
+            .get(format!("{}/v1/master/liquidity/curve", self.api_endpoint))
+            .send()
+            .await?;
+        let body = response.json::<SlippageCurveDTO>().await?;
+        Ok(body)
+    }
+
+    pub async fn simulate_liquidity(
+        &self,
+        amount: &str,
+    ) -> anyhow::Result<LiquiditySimulateResponseDTO> {
+        let request_body = LiquiditySimulateRequestDTO {
+            amount: amount.to_string(),
+        };
+
+        let response = self
+            .http_client
+            .post(format!(
+                "{}/v1/master/liquidity/simulate",
+                self.api_endpoint
+            ))
+            .json(&request_body)
+            .send()
+            .await?;
+        let body = response.json::<LiquiditySimulateResponseDTO>().await?;
         Ok(body)
     }
 

@@ -19,22 +19,17 @@ pub use sortino::calculate_sortino_ratio;
 pub use task::KpiTask;
 
 #[derive(Debug, Clone, Default)]
-pub struct KpiCalculationResult {
+pub struct PnlCalculationResult {
     pub all_time_pnl: Decimal,
     pub unrealized_pnl: Decimal,
     pub realized_pnl: Decimal,
-    pub max_drawdown_pct: f64,
-    pub sharpe_ratio: f64,
-    pub sortino_ratio: f64,
 }
 
-/// Calculate user KPIs from fresh data and return calculation results
-/// NOTE: transactions must be pre-sorted in chronological order (oldest first)
-pub fn calculate_user_kpis(
+pub fn calculate_user_pnl(
     position: &UserPosition,
     transactions: &[UserTransaction],
     current_share_price: Decimal,
-) -> Result<KpiCalculationResult, KpiError> {
+) -> Result<PnlCalculationResult, KpiError> {
     debug_assert!(
         transactions
             .windows(2)
@@ -55,7 +50,7 @@ pub fn calculate_user_kpis(
     }
 
     if position.share_balance == Decimal::ZERO {
-        return Ok(KpiCalculationResult::default());
+        return Ok(PnlCalculationResult::default());
     }
 
     // Calculate cost basis and realized PnL from transactions
@@ -68,18 +63,9 @@ pub fn calculate_user_kpis(
     // Calculate all-time PnL
     let all_time_pnl = realized_pnl + unrealized_pnl;
 
-    // let max_drawdown_pct = calculate_max_drawdown()?;
-
-    // let sharpe_ratio = calculate_sharpe_ratio()?;
-
-    // let sortino_ratio = calculate_sortino_ratio()?;
-
-    Ok(KpiCalculationResult {
+    Ok(PnlCalculationResult {
         all_time_pnl,
         unrealized_pnl,
         realized_pnl,
-        max_drawdown_pct: 0.0,
-        sharpe_ratio: 0.0,
-        sortino_ratio: 0.0,
     })
 }
