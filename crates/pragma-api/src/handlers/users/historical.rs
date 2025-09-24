@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::{
     AppState,
+    dto::ApiResponse,
     dto::{
         DisplayCurrency, HistoricalDataPoint, HistoricalUserPerformance, PerformanceMetric,
         Timeframe,
@@ -121,5 +122,5 @@ pub async fn get_historical_user_performance(
         points,
     };
 
-    Ok(Json(response))
+    Ok(Json(ApiResponse::ok(response)))
 }

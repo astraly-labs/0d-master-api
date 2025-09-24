@@ -6,7 +6,7 @@ use axum::{
 
 use crate::{
     AppState,
-    dto::{UserTransaction, UserTransactionHistory},
+    dto::{ApiResponse, UserTransaction, UserTransactionHistory},
     errors::ApiError,
     helpers::validate_indexer_status,
 };
@@ -105,5 +105,5 @@ pub async fn get_user_transaction_history(
 
     let response = UserTransactionHistory { items, next_cursor };
 
-    Ok(Json(response))
+    Ok(Json(ApiResponse::ok(response)))
 }

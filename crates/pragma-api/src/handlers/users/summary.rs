@@ -5,7 +5,10 @@ use axum::{
 };
 
 use crate::{
-    AppState, dto::UserPositionSummary, errors::ApiError, helpers::validate_indexer_status,
+    AppState,
+    dto::{ApiResponse, UserPositionSummary},
+    errors::ApiError,
+    helpers::validate_indexer_status,
 };
 use chrono::Utc;
 use pragma_db::models::{UserPosition, UserTransaction, Vault};
@@ -129,5 +132,5 @@ pub async fn get_user_position_summary(
         all_time_earned: all_time_earned.to_string(),
     };
 
-    Ok(Json(summary))
+    Ok(Json(ApiResponse::ok(summary)))
 }

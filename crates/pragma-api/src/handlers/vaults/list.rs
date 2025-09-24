@@ -2,7 +2,7 @@ use axum::{Json, extract::State, response::IntoResponse};
 
 use crate::{
     AppState,
-    dto::{VaultListItem, VaultListResponse},
+    dto::{ApiResponse, VaultListItem, VaultListResponse},
     errors::ApiError,
     helpers::map_status,
 };
@@ -66,5 +66,5 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
         });
     }
 
-    Ok(Json(VaultListResponse { items }))
+    Ok(Json(ApiResponse::ok(VaultListResponse { items })))
 }

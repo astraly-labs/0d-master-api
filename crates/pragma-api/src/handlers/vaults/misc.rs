@@ -7,7 +7,11 @@ use axum::{
 use pragma_db::models::Vault;
 use pragma_master::{CapsDTO, NavLatestDTO, VaultMasterAPIClient};
 
-use crate::{AppState, dto::VaultInfoDTO, errors::ApiError};
+use crate::{
+    AppState,
+    dto::{ApiResponse, VaultInfoDTO},
+    errors::ApiError,
+};
 
 #[utoipa::path(
     get,
@@ -56,7 +60,7 @@ pub async fn get_vault_caps(
         ApiError::InternalServerError
     })?;
 
-    Ok(Json(caps))
+    Ok(Json(ApiResponse::ok(caps)))
 }
 
 #[utoipa::path(
@@ -106,7 +110,7 @@ pub async fn get_vault_nav_latest(
         ApiError::InternalServerError
     })?;
 
-    Ok(Json(nav_latest))
+    Ok(Json(ApiResponse::ok(nav_latest)))
 }
 
 #[utoipa::path(
@@ -166,5 +170,5 @@ pub async fn get_vault_info(
         share_price_in_usd: vault_info.share_price_in_usd,
     };
 
-    Ok(Json(info_dto))
+    Ok(Json(ApiResponse::ok(info_dto)))
 }

@@ -75,9 +75,8 @@ pub struct HistoricalUserPerformance {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct PendingAsset {
+pub struct PendingRedeem {
     pub vault_id: String,
-    pub asset_type: String,
     pub amount: String,
     pub transaction_type: TransactionType,
     pub tx_hash: String,
@@ -85,10 +84,10 @@ pub struct PendingAsset {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct PendingAssetsResponse {
+pub struct PendingRedeemsResponse {
     pub address: String,
     pub as_of: DateTime<Utc>,
-    pub pending_assets: Vec<PendingAsset>,
+    pub pending_redeems: Vec<PendingRedeem>,
     pub total_pending: String,
 }
 
@@ -128,11 +127,10 @@ impl From<pragma_db::models::UserTransaction> for UserTransaction {
     }
 }
 
-impl From<pragma_db::models::UserTransaction> for PendingAsset {
+impl From<pragma_db::models::UserTransaction> for PendingRedeem {
     fn from(tx: pragma_db::models::UserTransaction) -> Self {
         Self {
             vault_id: tx.vault_id,
-            asset_type: "usdc".to_string(), // TODO: Support other assets
             amount: tx.amount.to_string(),
             transaction_type: match tx.type_.as_str() {
                 "deposit" => TransactionType::Deposit,

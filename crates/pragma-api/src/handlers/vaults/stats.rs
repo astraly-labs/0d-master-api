@@ -7,7 +7,7 @@ use axum::{
 use pragma_db::models::Vault;
 use pragma_master::{GetStatsDTO, VaultMasterAPIClient};
 
-use crate::{AppState, errors::ApiError};
+use crate::{AppState, dto::ApiResponse, errors::ApiError};
 
 #[utoipa::path(
     get,
@@ -56,5 +56,5 @@ pub async fn get_vault_stats(
         ApiError::InternalServerError
     })?;
 
-    Ok(Json(vault_stats))
+    Ok(Json(ApiResponse::ok(vault_stats)))
 }

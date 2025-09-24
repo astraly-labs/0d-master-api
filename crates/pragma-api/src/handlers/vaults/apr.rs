@@ -9,7 +9,7 @@ use pragma_master::{AprSeriesDTO, AprSummaryDTO, VaultMasterAPIClient};
 
 use crate::{
     AppState,
-    dto::{AprSeriesQuery, AprSummaryQuery},
+    dto::{ApiResponse, AprSeriesQuery, AprSummaryQuery},
     errors::ApiError,
 };
 
@@ -73,7 +73,7 @@ pub async fn get_vault_apr_summary(
             ApiError::InternalServerError
         })?;
 
-    Ok(Json(apr_summary))
+    Ok(Json(ApiResponse::ok(apr_summary)))
 }
 
 #[utoipa::path(
@@ -136,5 +136,5 @@ pub async fn get_vault_apr_series(
             ApiError::InternalServerError
         })?;
 
-    Ok(Json(apr_series))
+    Ok(Json(ApiResponse::ok(apr_series)))
 }

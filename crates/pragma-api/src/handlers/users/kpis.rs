@@ -5,7 +5,12 @@ use axum::{
 };
 use rust_decimal::Decimal;
 
-use crate::{AppState, dto::UserKpi, errors::ApiError, helpers::validate_indexer_status};
+use crate::{
+    AppState,
+    dto::{ApiResponse, UserKpi},
+    errors::ApiError,
+    helpers::validate_indexer_status,
+};
 use pragma_db::models::{UserPosition, UserTransaction, Vault};
 use pragma_kpi::calculate_user_pnl;
 use pragma_master::VaultMasterAPIClient;
@@ -143,5 +148,5 @@ pub async fn get_user_kpis(
     cached_kpis.unrealized_pnl = Some(pnl_result.unrealized_pnl);
     cached_kpis.realized_pnl = Some(pnl_result.realized_pnl);
 
-    Ok(Json(cached_kpis))
+    Ok(Json(ApiResponse::ok(cached_kpis)))
 }
