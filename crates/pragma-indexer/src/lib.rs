@@ -34,15 +34,24 @@ impl IndexerService {
             .db_pool
             .get()
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))
-            .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to get database connection: {e}"))
+            .map_err(|e| anyhow::anyhow!("Failed to get database connection: {e}"))?;
 
         let vaults = conn
             .interact(Vault::find_all)
             .await
-            .map_err(|e| anyhow::anyhow!("Database interaction error: {:?}", e))??;
+            .map_err(|e| anyhow::anyhow!("Database interaction error: {e}"))??;
+
+        if vaults.is_empty() {
+            anyhow::bail!("No vaults found in the database!");
+        }
 
         for vault in vaults {
+            tracing::info!(
+                "Starting indexer for vault: {} at block {}",
+                vault.id,
+                vault.start_block
+            );
             supervisor = supervisor.with_task(
                 &vault.id,
                 StarknetIndexer {

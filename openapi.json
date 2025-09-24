@@ -133,6 +133,9 @@
           },
           "500": {
             "description": "Internal server error"
+          },
+          "503": {
+            "description": "Indexer not synced or experiencing issues"
           }
         }
       }
@@ -179,6 +182,9 @@
           },
           "500": {
             "description": "Internal server error"
+          },
+          "503": {
+            "description": "Indexer not synced or experiencing issues"
           }
         }
       }
@@ -225,6 +231,9 @@
           },
           "500": {
             "description": "Internal server error"
+          },
+          "503": {
+            "description": "Indexer not synced or experiencing issues"
           }
         }
       }
@@ -299,6 +308,9 @@
           },
           "500": {
             "description": "Internal server error"
+          },
+          "503": {
+            "description": "Indexer not synced or experiencing issues"
           }
         }
       }

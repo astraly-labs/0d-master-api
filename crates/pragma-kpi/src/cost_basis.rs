@@ -27,7 +27,7 @@ pub fn calculate_cost_basis_and_realized_pnl(
                         ));
                     }
                     share_balance += shares;
-                    cost_basis += tx.amount; // TODO: Verify that the amount quoted is correct
+                    cost_basis += tx.amount; // NOTE: Amount should be normalized
                 }
             }
             "withdraw" => {
@@ -51,7 +51,7 @@ pub fn calculate_cost_basis_and_realized_pnl(
                     let withdrawn_cost_basis = shares * avg_cost_per_share;
 
                     // Calculate realized PnL for this withdrawal
-                    let withdrawal_value = tx.amount; // TODO: Verify that the amount quoted is correct
+                    let withdrawal_value = tx.amount; // NOTE: Amount should be normalized
                     realized_pnl += withdrawal_value - withdrawn_cost_basis;
 
                     // Update remaining position
@@ -65,9 +65,7 @@ pub fn calculate_cost_basis_and_realized_pnl(
                     }
                 }
             }
-            _ => {
-                unreachable!("Invalid transaction type: {}", tx.type_)
-            }
+            _ => {}
         }
     }
 

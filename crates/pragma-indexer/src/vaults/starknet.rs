@@ -11,9 +11,8 @@ use pragma_db::models::{
     user::User,
     user_position::{NewUserPosition, UserPosition, UserPositionUpdate},
     user_transaction::{NewUserTransaction, TransactionStatus, TransactionType, UserTransaction},
-    vault::Vault,
 };
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, dec};
 use starknet::core::types::Felt;
 use task_supervisor::{SupervisedTask, TaskError};
 
@@ -31,9 +30,6 @@ pub struct StarknetIndexer {
 #[async_trait::async_trait]
 impl SupervisedTask for StarknetIndexer {
     async fn run(&mut self) -> Result<(), TaskError> {
-        // Validate that the vault exists before starting
-        self.vault_exists().await?;
-
         // Load the last processed block from the database
         self.state.load_last_processed_block(&self.vault_id).await?;
 
@@ -78,8 +74,8 @@ impl SupervisedTask for StarknetIndexer {
                             self.state.update_indexer_state(&self.vault_id, block_number, block_timestamp).await?;
                         }
                         OutputEvent::Synced => {
+                            self.state.set_indexer_state_synced(&self.vault_id).await?;
                             tracing::info!("[StarknetIndexer] 🥳 Vault({}) reached the tip of the chain!", self.vault_id);
-                            // TODO: Should we flag as synced?
                         }
                         // NOTE: Never happens for now. See later when apibara upgrades?
                         OutputEvent::Finalized(_) | OutputEvent::Invalidated(_) => { }
@@ -137,21 +133,20 @@ impl StarknetIndexer {
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
-        //tracing::info!("[StartknetIndexer] 💰 Handling deposit event with hash: {tx_hash}");
+        tracing::info!("[StartknetIndexer] 💰 Handling deposit event with hash: {tx_hash}");
 
         let user_address = felt_to_hex_str(deposit.owner);
         self.ensure_user_exists(user_address.clone()).await?;
 
+        let deposit_shares = deposit.shares / dec!(1e6);
+        let deposit_assets = deposit.assets / dec!(1e6);
+
         // NOTE: This is the share price at the time of the deposit
-        let share_price = if deposit.shares > Decimal::ZERO {
-            Some(deposit.assets / deposit.shares)
+        let share_price = if deposit_shares > Decimal::ZERO {
+            Some(deposit_assets / deposit_shares)
         } else {
             None
         };
-
-        tracing::info!(
-            "[StartknetIndexer] 💰 Deposit event with hash: {tx_hash} [share_price: {share_price:?}]"
-        );
 
         // Check if transaction already exists to avoid duplicates
         let conn = self.state.db_pool.get().await?;
@@ -183,8 +178,8 @@ impl StarknetIndexer {
             vault_id: self.vault_id.clone(),
             type_: TransactionType::Deposit.as_str().to_string(),
             status: TransactionStatus::Confirmed.as_str().to_string(),
-            amount: deposit.assets,
-            shares_amount: Some(deposit.shares),
+            amount: deposit_assets,
+            shares_amount: Some(deposit_shares),
             share_price,
             gas_fee: None,
             metadata: None,
@@ -193,7 +188,7 @@ impl StarknetIndexer {
         let conn = self.state.db_pool.get().await?;
         conn.interact(move |conn| UserTransaction::create(&new_transaction, conn))
             .await
-            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Transaction creation failed: {e}"))?
+            .map_err(|e| anyhow::anyhow!("[StarknetIndexer] 🗃️ Transaction creation failed: {e}"))?
             .map_err(anyhow::Error::from)?;
 
         let conn = self.state.db_pool.get().await?;
@@ -202,8 +197,8 @@ impl StarknetIndexer {
             match UserPosition::find_by_user_and_vault(&user_address, &vault_id, conn) {
                 Ok(position) => {
                     // Add deposit to existing position
-                    let new_share_balance = position.share_balance + deposit.shares;
-                    let new_cost_basis = position.cost_basis + deposit.assets;
+                    let new_share_balance = position.share_balance + deposit_shares;
+                    let new_cost_basis = position.cost_basis + deposit_assets;
 
                     let updates = UserPositionUpdate {
                         share_balance: Some(new_share_balance),
@@ -219,8 +214,8 @@ impl StarknetIndexer {
                     let new_position = NewUserPosition {
                         user_address,
                         vault_id: vault_id.clone(),
-                        share_balance: deposit.shares,
-                        cost_basis: deposit.assets,
+                        share_balance: deposit_shares,
+                        cost_basis: deposit_assets,
                         first_deposit_at: Some(block_timestamp),
                         last_activity_at: Some(block_timestamp),
                     };
@@ -231,7 +226,7 @@ impl StarknetIndexer {
             }
         })
         .await
-        .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Position update failed: {e}"))?
+        .map_err(|e| anyhow::anyhow!("[StarknetIndexer] 🗃️ Position update failed: {e}"))?
         .map_err(anyhow::Error::from)?;
 
         Ok(())
@@ -243,14 +238,17 @@ impl StarknetIndexer {
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
-        tracing::info!("[ExtendedVault] 💸 Handling redeem requested event with hash: {tx_hash}");
+        tracing::info!("[StarknetIndexer] 💸 Handling redeem requested event with hash: {tx_hash}");
 
         let user_address = felt_to_hex_str(redeem.owner);
         self.ensure_user_exists(user_address.clone()).await?;
 
+        let redeem_shares = redeem.shares / dec!(1e6);
+        let redeem_assets = redeem.assets / dec!(1e6);
+
         // NOTE: This is the share price at the time of the redeem request
-        let share_price = if redeem.shares > Decimal::ZERO {
-            Some(redeem.assets / redeem.shares)
+        let share_price = if redeem_shares > Decimal::ZERO {
+            Some(redeem_assets / redeem_shares)
         } else {
             None
         };
@@ -263,12 +261,12 @@ impl StarknetIndexer {
                 move |conn| UserTransaction::exists_by_hash(&tx_hash_check, conn)
             })
             .await
-            .map_err(|e| anyhow::anyhow!("[ExtendedVault] 🗃️ Database interaction failed: {e}"))?
+            .map_err(|e| anyhow::anyhow!("[StarknetIndexer] 🗃️ Database interaction failed: {e}"))?
             .map_err(anyhow::Error::from)?;
 
         if tx_exists {
             tracing::info!(
-                "[ExtendedVault] ⏭️  Skipping duplicate withdraw transaction: {} (block: {})",
+                "[StarknetIndexer] ⏭️  Skipping duplicate withdraw transaction: {} (block: {})",
                 tx_hash,
                 block_number
             );
@@ -286,8 +284,8 @@ impl StarknetIndexer {
             vault_id: self.vault_id.clone(),
             type_: TransactionType::Withdraw.as_str().to_string(),
             status: TransactionStatus::Pending.as_str().to_string(),
-            amount: redeem.assets,
-            shares_amount: Some(redeem.shares),
+            amount: redeem_assets,
+            shares_amount: Some(redeem_shares),
             share_price,
             gas_fee: None,
             metadata: Some(serde_json::json!({
@@ -311,7 +309,7 @@ impl StarknetIndexer {
             match UserPosition::find_by_user_and_vault(&user_address, &vault_id, conn) {
                 Ok(position) => {
                     // Reduce share balance for pending redemption
-                    let new_share_balance = position.share_balance - redeem.shares;
+                    let new_share_balance = position.share_balance - redeem_shares;
 
                     // Ensure we don't go negative
                     let new_share_balance = if new_share_balance < Decimal::ZERO {
@@ -331,7 +329,7 @@ impl StarknetIndexer {
                 }
                 Err(diesel::result::Error::NotFound) => {
                     tracing::warn!(
-                        "Redeem requested for non-existent position: user={}, vault={}",
+                        "[StarknetIndexer] ⏭️ Redeem requested for non-existent position: user={}, vault={}",
                         user_address,
                         vault_id
                     );
@@ -457,40 +455,6 @@ impl StarknetIndexer {
         }
 
         Ok(())
-    }
-
-    /// Validate that the vault exists in the database before starting indexer
-    async fn vault_exists(&self) -> Result<(), anyhow::Error> {
-        let vault_id = self.vault_id.clone();
-        let conn = self.state.db_pool.get().await?;
-
-        let result = conn
-            .interact(move |conn| Vault::find_by_id(&vault_id, conn))
-            .await
-            .map_err(|e| {
-                anyhow::anyhow!("[StartknetIndexer] 🗃️ Database interaction failed: {e}")
-            })?;
-
-        match result {
-            Ok(vault) => {
-                tracing::info!(
-                    "[StartknetIndexer] 🔎 Vault exists in database with name({}) and id({})",
-                    vault.name,
-                    vault.id
-                );
-                Ok(())
-            }
-            Err(diesel::result::Error::NotFound) => {
-                anyhow::bail!(
-                    "[StartknetIndexer] ❌ Vault with ID '{}' not found in database.\n\
-                    To fix this error, create the vault record in the database.",
-                    self.vault_id
-                );
-            }
-            Err(e) => {
-                anyhow::bail!("[StartknetIndexer] 🗃️ Database error while checking vault: {e}");
-            }
-        }
     }
 
     /// Ensure user exists in database

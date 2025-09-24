@@ -5,7 +5,7 @@ use axum::{
 };
 use rust_decimal::Decimal;
 
-use crate::{AppState, dto::UserKpi, errors::ApiError};
+use crate::{AppState, dto::UserKpi, errors::ApiError, helpers::validate_indexer_status};
 use pragma_db::models::{UserPosition, UserTransaction, Vault};
 use pragma_kpi::calculate_user_pnl;
 use pragma_master::VaultMasterAPIClient;
@@ -21,6 +21,7 @@ use pragma_master::VaultMasterAPIClient;
     responses(
         (status = 200, description = "User performance KPIs", body = UserKpi),
         (status = 404, description = "User KPIs not found"),
+        (status = 503, description = "Indexer not synced or experiencing issues"),
         (status = 500, description = "Internal server error")
     )
 )]
@@ -28,6 +29,9 @@ pub async fn get_user_kpis(
     State(state): State<AppState>,
     Path((address, vault_id)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ApiError> {
+    // Validate that the indexer is synced before serving user data
+    validate_indexer_status(&vault_id, &state.pool).await?;
+
     let conn = state.pool.get().await.map_err(|e| {
         tracing::error!("Failed to get database connection: {}", e);
         ApiError::InternalServerError

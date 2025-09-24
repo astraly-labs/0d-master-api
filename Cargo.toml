@@ -117,7 +117,9 @@ rust_decimal = { version = "1.35", features = [
     "db-diesel-postgres",
     "serde",
     "maths",
+    "macros",
 ] }
+
 
 # OpenAPI
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }

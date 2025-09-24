@@ -4,7 +4,9 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::{AppState, dto::UserPositionSummary, errors::ApiError};
+use crate::{
+    AppState, dto::UserPositionSummary, errors::ApiError, helpers::validate_indexer_status,
+};
 use chrono::Utc;
 use pragma_db::models::{UserPosition, UserTransaction, Vault};
 use pragma_master::VaultMasterAPIClient;
@@ -21,6 +23,7 @@ use rust_decimal::Decimal;
     responses(
         (status = 200, description = "User position summary", body = UserPositionSummary),
         (status = 404, description = "User position not found"),
+        (status = 503, description = "Indexer not synced or experiencing issues"),
         (status = 500, description = "Internal server error")
     )
 )]
@@ -28,6 +31,9 @@ pub async fn get_user_position_summary(
     State(state): State<AppState>,
     Path((address, vault_id)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ApiError> {
+    // Validate that the indexer is synced before serving user data
+    validate_indexer_status(&vault_id, &state.pool).await?;
+
     let conn = state.pool.get().await.map_err(|e| {
         tracing::error!("Failed to get database connection: {}", e);
         ApiError::InternalServerError

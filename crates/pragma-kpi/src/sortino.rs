@@ -1,4 +1,4 @@
-use rust_decimal::{Decimal, MathematicalOps, prelude::FromPrimitive};
+use rust_decimal::{Decimal, MathematicalOps, dec, prelude::FromPrimitive};
 
 use chrono::{DateTime, Utc};
 
@@ -57,7 +57,7 @@ pub fn calculate_sortino_ratio(
 
     if downside_count == 0 {
         return if mean_return > target_return {
-            Ok(Decimal::MAX) // No downside risk, return maximum representable value
+            Ok(dec!(100)) // Cap at 100%
         } else {
             Ok(Decimal::ZERO) // No excess return, Sortino ratio is zero
         };
@@ -74,8 +74,8 @@ pub fn calculate_sortino_ratio(
     };
 
     // Assuming daily returns; adjust for actual time deltas if needed
-    let annualized_return = mean_return * Decimal::from(365);
-    let annualized_target = target_return * Decimal::from(365);
+    let annualized_return = mean_return * dec!(365);
+    let annualized_target = target_return * dec!(365);
     let annualized_downside_dev = downside_deviation
         * Decimal::from_f64(365.0_f64.sqrt()).ok_or_else(|| {
             KpiError::CalculationError("Failed to compute annualized downside dev".to_string())

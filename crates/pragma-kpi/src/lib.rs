@@ -6,7 +6,8 @@ pub mod sharpe;
 pub mod sortino;
 pub mod task;
 
-use rust_decimal::Decimal;
+use chrono::{DateTime, Utc};
+use rust_decimal::{Decimal, dec};
 
 use pragma_db::models::{UserPosition, UserTransaction};
 
@@ -67,5 +68,34 @@ pub fn calculate_user_pnl(
         all_time_pnl,
         unrealized_pnl,
         realized_pnl,
+    })
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct RiskMetricsResult {
+    pub max_drawdown_pct: Decimal,
+    pub sharpe_ratio: Decimal,
+    pub sortino_ratio: Decimal,
+}
+
+pub fn calculate_risk_metrics(
+    portfolio_history: &[(DateTime<Utc>, Decimal)],
+) -> Result<RiskMetricsResult, KpiError> {
+    if portfolio_history.len() < 2 {
+        return Ok(RiskMetricsResult::default());
+    }
+
+    // TODO: Check for risk related values relevant to the vault
+    let risk_free_rate = dec!(0.05); // 5% annualized
+    let daily_risk_free_rate = risk_free_rate / dec!(365);
+
+    let max_drawdown = calculate_max_drawdown(portfolio_history)?;
+    let sharpe = calculate_sharpe_ratio(portfolio_history, risk_free_rate)?;
+    let sortino = calculate_sortino_ratio(portfolio_history, daily_risk_free_rate)?;
+
+    Ok(RiskMetricsResult {
+        max_drawdown_pct: max_drawdown,
+        sharpe_ratio: sharpe,
+        sortino_ratio: sortino,
     })
 }

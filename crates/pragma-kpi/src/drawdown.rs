@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, dec};
 
 use crate::error::KpiError;
 
@@ -23,7 +23,7 @@ pub fn calculate_max_drawdown(
         if *value > peak_value {
             peak_value = *value;
         } else if peak_value > Decimal::ZERO {
-            let drawdown = ((peak_value - *value) / peak_value) * Decimal::from(100);
+            let drawdown = ((peak_value - *value) / peak_value) * dec!(100);
             max_drawdown = max_drawdown.max(drawdown);
         }
     }
