@@ -54,6 +54,7 @@ impl SupervisedTask for StarknetIndexer {
                 Some(output_event) = event_receiver.recv() => {
                     match output_event {
                         OutputEvent::Event { header, event, tx_hash } => {
+                            tracing::info!("[StarknetIndexer] New block is indexed");
                             let (block_number, block_timestamp) =
                             header.map_or_else(|| todo!(), |h| (h.block_number, h.timestamp));
 

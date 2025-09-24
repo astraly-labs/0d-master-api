@@ -204,6 +204,36 @@ impl IndexerState {
         }
     }
 
+    /// Update indexer state with status preservation
+    pub fn update_with_status_preservation(
+        vault_id: &str,
+        last_processed_block: i64,
+        last_processed_timestamp: Option<DateTime<Utc>>,
+        conn: &mut PgConnection,
+    ) -> Result<Self, diesel::result::Error> {
+        // Get current state to check status
+        let current_state = Self::find_by_vault_id(vault_id, conn)?;
+
+        // Preserve synced status, otherwise set to active
+        let new_status = if current_state.is_synced() {
+            IndexerStatus::Synced
+        } else {
+            IndexerStatus::Active
+        };
+
+        // Update with preserved status
+        let updates = IndexerStateUpdate {
+            last_processed_block: Some(last_processed_block),
+            last_processed_timestamp,
+            status: Some(new_status.as_str().to_string()),
+            last_error: None, // Clear any previous errors
+            last_error_at: None,
+            updated_at: Some(Utc::now()),
+        };
+
+        current_state.update(&updates, conn)
+    }
+
     /// Record an error for the indexer state
     pub fn record_error(
         &self,

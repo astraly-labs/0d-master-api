@@ -1,8 +1,6 @@
 use chrono::{DateTime, Utc};
 use deadpool_diesel::postgres::Pool;
-use pragma_db::models::indexer_state::{
-    IndexerState, IndexerStateUpdate, IndexerStatus, NewIndexerState,
-};
+use pragma_db::models::indexer_state::{IndexerState, IndexerStateUpdate, IndexerStatus};
 
 #[derive(Clone)]
 pub struct VaultState {
@@ -108,13 +106,12 @@ impl VaultState {
         let vault_id = vault_id.to_string();
 
         conn.interact(move |conn| {
-            IndexerState::upsert_for_vault(
+            IndexerState::update_with_status_preservation(
                 &vault_id,
                 block_number
                     .try_into()
                     .expect("[VaultState] 🌯 Block number too large for i64"),
                 Some(block_timestamp),
-                Some(IndexerStatus::Active),
                 conn,
             )
         })
@@ -134,42 +131,20 @@ impl VaultState {
     pub async fn set_indexer_state_synced(&self, vault_id: &str) -> Result<(), anyhow::Error> {
         let conn = self.db_pool.get().await?;
         let vault_id = vault_id.to_string();
-        let current_block = self.current_block;
-        let current_timestamp = self.current_timestamp;
 
-        conn.interact(move |conn| {
-            match IndexerState::find_by_vault_id(&vault_id, conn) {
-                Ok(state) => {
-                    let mut state = state;
-                    state.set_status_enum(IndexerStatus::Synced);
-                    state.status = Some(IndexerStatus::Synced.as_str().to_string());
-                    state.updated_at = Some(Utc::now());
-                    state.update(
-                        &IndexerStateUpdate {
-                            status: Some(IndexerStatus::Synced.as_str().to_string()),
-                            updated_at: Some(Utc::now()),
-                            ..Default::default()
-                        },
-                        conn,
-                    )
-                }
-                Err(diesel::result::Error::NotFound) => {
-                    // Create new state with synced status
-                    let new_state = NewIndexerState {
-                        vault_id: vault_id.clone(),
-                        last_processed_block: current_block
-                            .try_into()
-                            .expect("[VaultState] 🌯 Block number too large for i64"),
-                        last_processed_timestamp: current_timestamp,
-                        last_error: None,
-                        last_error_at: None,
+        conn.interact(
+            move |conn| match IndexerState::find_by_vault_id(&vault_id, conn) {
+                Ok(state) => state.update(
+                    &IndexerStateUpdate {
                         status: Some(IndexerStatus::Synced.as_str().to_string()),
-                    };
-                    IndexerState::create(&new_state, conn)
-                }
+                        updated_at: Some(Utc::now()),
+                        ..Default::default()
+                    },
+                    conn,
+                ),
                 Err(e) => Err(e),
-            }
-        })
+            },
+        )
         .await
         .map_err(|e| {
             anyhow::anyhow!(
@@ -191,28 +166,12 @@ impl VaultState {
         let conn = self.db_pool.get().await?;
         let vault_id = vault_id.to_string();
 
-        let current_block = self.current_block;
-        let current_timestamp = self.current_timestamp;
-        conn.interact(move |conn| {
-            match IndexerState::find_by_vault_id(&vault_id, conn) {
+        conn.interact(
+            move |conn| match IndexerState::find_by_vault_id(&vault_id, conn) {
                 Ok(state) => state.record_error(error_message, conn),
-                Err(diesel::result::Error::NotFound) => {
-                    // Create new state with error
-                    let new_state = NewIndexerState {
-                        vault_id: vault_id.clone(),
-                        last_processed_block: current_block
-                            .try_into()
-                            .expect("[VaultState] 🌯 Block number too large for i64"),
-                        last_processed_timestamp: current_timestamp,
-                        last_error: Some(error_message),
-                        last_error_at: Some(Utc::now()),
-                        status: Some(IndexerStatus::Error.as_str().to_string()),
-                    };
-                    IndexerState::create(&new_state, conn)
-                }
                 Err(e) => Err(e),
-            }
-        })
+            },
+        )
         .await
         .map_err(|e| {
             anyhow::anyhow!(
