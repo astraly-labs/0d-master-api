@@ -936,7 +936,6 @@ components:
         transaction_type: { type: string, enum: [deposit, withdraw, transfer, claim] }
         tx_hash: { type: string }
         submitted_at: { type: string, format: date-time }
-        estimated_confirmation: { type: string, format: date-time, nullable: true }
       required: [vault_id, asset_type, amount, transaction_type, tx_hash, submitted_at]
 
     PendingAssetsResponse:

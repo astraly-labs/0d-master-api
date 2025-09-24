@@ -82,7 +82,6 @@ pub struct PendingAsset {
     pub transaction_type: TransactionType,
     pub tx_hash: String,
     pub submitted_at: DateTime<Utc>,
-    pub estimated_confirmation: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -144,7 +143,6 @@ impl From<pragma_db::models::UserTransaction> for PendingAsset {
             },
             tx_hash: tx.tx_hash,
             submitted_at: tx.block_timestamp,
-            estimated_confirmation: None, // TODO:
         }
     }
 }
