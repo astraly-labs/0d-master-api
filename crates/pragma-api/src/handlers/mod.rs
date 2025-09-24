@@ -2,8 +2,8 @@ pub mod users;
 pub mod vaults;
 
 pub use users::{
-    get_historical_user_performance, get_user_kpis, get_user_position_summary, get_user_profile,
-    get_user_transaction_history,
+    get_historical_user_performance, get_user_kpis, get_user_pending_assets,
+    get_user_position_summary, get_user_profile, get_user_transaction_history,
 };
 
 pub use vaults::{

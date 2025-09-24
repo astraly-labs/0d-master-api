@@ -56,6 +56,10 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
     let users_router = Router::new()
         .route("/{address}", get(handlers::get_user_profile))
         .route(
+            "/{address}/pending-assets",
+            get(handlers::get_user_pending_assets),
+        )
+        .route(
             "/{address}/vaults/{vault_id}/summary",
             get(handlers::get_user_position_summary),
         )
