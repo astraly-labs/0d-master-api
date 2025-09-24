@@ -1,19 +1,21 @@
 use std::collections::HashSet;
 
 use chrono::{DateTime, Utc};
+use evian::contracts::starknet::vault::StarknetVaultContract;
 use evian::contracts::starknet::vault::data::indexer::events::{
     DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, VaultAddress, VaultEvent,
 };
 use evian::{
     contracts::starknet::vault::StarknetVaultIndexer, utils::indexer::handler::OutputEvent,
 };
+use pragma_common::starknet::FallbackProvider;
 use pragma_db::models::{
     user::User,
     user_position::{NewUserPosition, UserPosition, UserPositionUpdate},
     user_transaction::{NewUserTransaction, TransactionStatus, TransactionType, UserTransaction},
 };
-use rust_decimal::{Decimal, dec};
-use starknet::core::types::Felt;
+use rust_decimal::Decimal;
+use starknet::core::types::{BlockId, Felt};
 use task_supervisor::{SupervisedTask, TaskError};
 
 use crate::vaults::helpers::felt_to_hex_str;
@@ -24,6 +26,7 @@ pub struct StarknetIndexer {
     pub apibara_api_key: String,
     pub vault_address: Felt,
     pub vault_id: String,
+    pub starknet_provider: FallbackProvider,
     pub state: VaultState,
 }
 
@@ -139,8 +142,16 @@ impl StarknetIndexer {
         let user_address = felt_to_hex_str(deposit.owner);
         self.ensure_user_exists(user_address.clone()).await?;
 
-        let deposit_shares = deposit.shares / dec!(1e6);
-        let deposit_assets = deposit.assets / dec!(1e6);
+        let vault_contract =
+            StarknetVaultContract::new(self.starknet_provider.clone(), self.vault_address);
+        let underlying_asset_decimals = Decimal::from(
+            vault_contract
+                .underlying_asset_decimals(Some(BlockId::Number(block_number)))
+                .await?,
+        );
+
+        let deposit_shares = deposit.shares / underlying_asset_decimals;
+        let deposit_assets = deposit.assets / underlying_asset_decimals;
 
         // NOTE: This is the share price at the time of the deposit
         let share_price = if deposit_shares > Decimal::ZERO {
@@ -244,8 +255,16 @@ impl StarknetIndexer {
         let user_address = felt_to_hex_str(redeem.owner);
         self.ensure_user_exists(user_address.clone()).await?;
 
-        let redeem_shares = redeem.shares / dec!(1e6);
-        let redeem_assets = redeem.assets / dec!(1e6);
+        let vault_contract =
+            StarknetVaultContract::new(self.starknet_provider.clone(), self.vault_address);
+        let underlying_asset_decimals = Decimal::from(
+            vault_contract
+                .underlying_asset_decimals(Some(BlockId::Number(block_number)))
+                .await?,
+        );
+
+        let redeem_shares = redeem.shares / underlying_asset_decimals;
+        let redeem_assets = redeem.assets / underlying_asset_decimals;
 
         // NOTE: This is the share price at the time of the redeem request
         let share_price = if redeem_shares > Decimal::ZERO {

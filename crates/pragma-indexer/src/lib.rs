@@ -2,6 +2,7 @@ pub mod task;
 pub mod vaults;
 
 use deadpool_diesel::postgres::Pool;
+use pragma_common::starknet::FallbackProvider;
 use pragma_db::models::Vault;
 use starknet::core::types::Felt;
 use std::time::Duration;
@@ -12,13 +13,19 @@ use crate::vaults::{starknet::StarknetIndexer, state::VaultState};
 pub struct IndexerService {
     db_pool: Pool,
     apibara_api_key: String,
+    starknet_provider: FallbackProvider,
 }
 
 impl IndexerService {
-    pub const fn new(db_pool: Pool, apibara_api_key: String) -> Self {
+    pub const fn new(
+        db_pool: Pool,
+        apibara_api_key: String,
+        starknet_provider: FallbackProvider,
+    ) -> Self {
         Self {
             db_pool,
             apibara_api_key,
+            starknet_provider,
         }
     }
 
@@ -58,6 +65,7 @@ impl IndexerService {
                     vault_id: vault.id.clone(),
                     vault_address: Felt::from_hex(&vault.contract_address).unwrap(),
                     apibara_api_key: self.apibara_api_key.clone(),
+                    starknet_provider: self.starknet_provider.clone(),
                     state: VaultState::new(
                         vault.id.clone(),
                         vault.start_block as u64,
