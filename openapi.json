@@ -1558,13 +1558,6 @@
           "asset_type": {
             "type": "string"
           },
-          "estimated_confirmation": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
           "submitted_at": {
             "type": "string",
             "format": "date-time"
@@ -1586,7 +1579,7 @@
           "address",
           "as_of",
           "pending_assets",
-          "total_pending_usd"
+          "total_pending"
         ],
         "properties": {
           "address": {
@@ -1602,7 +1595,7 @@
               "$ref": "#/components/schemas/PendingAsset"
             }
           },
-          "total_pending_usd": {
+          "total_pending": {
             "type": "string"
           }
         }
