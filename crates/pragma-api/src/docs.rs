@@ -12,14 +12,14 @@ pub struct ServerAddon;
 
 impl Modify for ServerAddon {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-        let server_variable = ServerVariableBuilder::new()
-            .default_value("devnet")
-            .enum_values(Some(vec!["devnet", "production"]))
+        let version_variable = ServerVariableBuilder::new()
+            .default_value("v1")
+            .enum_values(Some(vec!["v1"]))
             .build();
         openapi.servers = Some(vec![
             ServerBuilder::new()
-                .url("https://{environment}.0d.finance/api/v1")
-                .parameter("environment", server_variable)
+                .url("https://api.0d.finance/{version}")
+                .parameter("version", version_variable)
                 .build(),
         ]);
     }
