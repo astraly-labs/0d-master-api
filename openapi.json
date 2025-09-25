@@ -61,12 +61,12 @@
         }
       }
     },
-    "/users/{address}/pending-assets": {
+    "/users/{address}/redeems": {
       "get": {
         "tags": [
           "User"
         ],
-        "operationId": "get_user_pending_assets",
+        "operationId": "get_user_pending_redeems",
         "parameters": [
           {
             "name": "address",
@@ -98,11 +98,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Pending assets for user",
+            "description": "Pending redeems for user",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PendingAssetsResponse"
+                  "$ref": "#/components/schemas/PendingRedeemsResponse"
                 }
               }
             }
@@ -1541,11 +1541,10 @@
           }
         }
       },
-      "PendingAsset": {
+      "PendingRedeem": {
         "type": "object",
         "required": [
           "vault_id",
-          "asset_type",
           "amount",
           "transaction_type",
           "tx_hash",
@@ -1553,9 +1552,6 @@
         ],
         "properties": {
           "amount": {
-            "type": "string"
-          },
-          "asset_type": {
             "type": "string"
           },
           "submitted_at": {
@@ -1573,12 +1569,12 @@
           }
         }
       },
-      "PendingAssetsResponse": {
+      "PendingRedeemsResponse": {
         "type": "object",
         "required": [
           "address",
           "as_of",
-          "pending_assets",
+          "pending_redeems",
           "total_pending"
         ],
         "properties": {
@@ -1589,10 +1585,10 @@
             "type": "string",
             "format": "date-time"
           },
-          "pending_assets": {
+          "pending_redeems": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/PendingAsset"
+              "$ref": "#/components/schemas/PendingRedeem"
             }
           },
           "total_pending": {
