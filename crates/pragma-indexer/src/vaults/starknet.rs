@@ -14,7 +14,7 @@ use pragma_db::models::{
     user_position::{NewUserPosition, UserPosition, UserPositionUpdate},
     user_transaction::{NewUserTransaction, TransactionStatus, TransactionType, UserTransaction},
 };
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps, dec};
 use starknet::core::types::{BlockId, Felt};
 use task_supervisor::{SupervisedTask, TaskError};
 
@@ -57,7 +57,6 @@ impl SupervisedTask for StarknetIndexer {
                 Some(output_event) = event_receiver.recv() => {
                     match output_event {
                         OutputEvent::Event { header, event, tx_hash } => {
-                            tracing::info!("[StarknetIndexer] New block is indexed");
                             let (block_number, block_timestamp) =
                             header.map_or_else(|| todo!(), |h| (h.block_number, h.timestamp));
 
@@ -150,8 +149,8 @@ impl StarknetIndexer {
                 .await?,
         );
 
-        let deposit_shares = deposit.shares / underlying_asset_decimals;
-        let deposit_assets = deposit.assets / underlying_asset_decimals;
+        let deposit_shares = deposit.shares / dec!(10).powd(underlying_asset_decimals);
+        let deposit_assets = deposit.assets / dec!(10).powd(underlying_asset_decimals);
 
         // NOTE: This is the share price at the time of the deposit
         let share_price = if deposit_shares > Decimal::ZERO {
@@ -263,8 +262,8 @@ impl StarknetIndexer {
                 .await?,
         );
 
-        let redeem_shares = redeem.shares / underlying_asset_decimals;
-        let redeem_assets = redeem.assets / underlying_asset_decimals;
+        let redeem_shares = redeem.shares / dec!(10).powd(underlying_asset_decimals);
+        let redeem_assets = redeem.assets / dec!(10).powd(underlying_asset_decimals);
 
         // NOTE: This is the share price at the time of the redeem request
         let share_price = if redeem_shares > Decimal::ZERO {
