@@ -2699,6 +2699,7 @@ dependencies = [
  "pragma-kpi",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -3354,6 +3355,7 @@ dependencies = [
  "num-traits",
  "rand 0.8.5",
  "rkyv",
+ "rust_decimal_macros",
  "serde",
  "serde_json",
 ]

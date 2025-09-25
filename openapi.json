@@ -61,6 +61,61 @@
         }
       }
     },
+    "/users/{address}/pending-assets": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "operationId": "get_user_pending_assets",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "User wallet address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vault_id",
+            "in": "query",
+            "description": "Filter by vault ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asset_type",
+            "in": "query",
+            "description": "Filter by asset type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending assets for user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAssetsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/users/{address}/vaults/{vault_id}/historical": {
       "get": {
         "tags": [
@@ -133,6 +188,9 @@
           },
           "500": {
             "description": "Internal server error"
+          },
+          "503": {
+            "description": "Indexer not synced or experiencing issues"
           }
         }
       }
@@ -179,6 +237,9 @@
           },
           "500": {
             "description": "Internal server error"
+          },
+          "503": {
+            "description": "Indexer not synced or experiencing issues"
           }
         }
       }
@@ -225,6 +286,9 @@
           },
           "500": {
             "description": "Internal server error"
+          },
+          "503": {
+            "description": "Indexer not synced or experiencing issues"
           }
         }
       }
@@ -299,6 +363,9 @@
           },
           "500": {
             "description": "Internal server error"
+          },
+          "503": {
+            "description": "Indexer not synced or experiencing issues"
           }
         }
       }
@@ -1471,6 +1538,65 @@
           "var_since_prev_pct": {
             "type": "number",
             "format": "double"
+          }
+        }
+      },
+      "PendingAsset": {
+        "type": "object",
+        "required": [
+          "vault_id",
+          "asset_type",
+          "amount",
+          "transaction_type",
+          "tx_hash",
+          "submitted_at"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "asset_type": {
+            "type": "string"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "transaction_type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
+          "tx_hash": {
+            "type": "string"
+          },
+          "vault_id": {
+            "type": "string"
+          }
+        }
+      },
+      "PendingAssetsResponse": {
+        "type": "object",
+        "required": [
+          "address",
+          "as_of",
+          "pending_assets",
+          "total_pending"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pending_assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingAsset"
+            }
+          },
+          "total_pending": {
+            "type": "string"
           }
         }
       },

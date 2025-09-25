@@ -7,7 +7,11 @@ use axum::{
 use pragma_db::models::Vault;
 use pragma_master::{KpisDTO, VaultMasterAPIClient};
 
-use crate::{AppState, dto::TimeframeQuery, errors::ApiError};
+use crate::{
+    AppState,
+    dto::{ApiResponse, TimeframeQuery},
+    errors::ApiError,
+};
 
 #[utoipa::path(
     get,
@@ -71,5 +75,5 @@ pub async fn get_vault_kpis(
             ApiError::InternalServerError
         })?;
 
-    Ok(Json(kpis))
+    Ok(Json(ApiResponse::ok(kpis)))
 }

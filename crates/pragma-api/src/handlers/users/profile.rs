@@ -4,7 +4,11 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::{AppState, dto::UserProfile, errors::ApiError};
+use crate::{
+    AppState,
+    dto::{ApiResponse, UserProfile},
+    errors::ApiError,
+};
 use pragma_db::models::User;
 
 #[utoipa::path(
@@ -48,5 +52,5 @@ pub async fn get_user_profile(
 
     let profile = UserProfile::from(user);
 
-    Ok(Json(profile))
+    Ok(Json(ApiResponse::ok(profile)))
 }

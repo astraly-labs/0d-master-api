@@ -336,39 +336,6 @@ impl UserKpi {
             .first(conn)
     }
 
-    /// Get historical portfolio values for calculating risk metrics
-    /// Returns a time series of (timestamp, `portfolio_value`) tuples
-    pub fn get_portfolio_history(
-        user_address: &str,
-        vault_id: &str,
-        conn: &mut diesel::PgConnection,
-    ) -> QueryResult<Vec<(DateTime<Utc>, Decimal)>> {
-        // Get historical KPI records (portfolio snapshots)
-        let historical_kpis = user_kpis::table
-            .filter(user_kpis::user_address.eq(user_address))
-            .filter(user_kpis::vault_id.eq(vault_id))
-            .filter(user_kpis::calculated_at.is_not_null())
-            .filter(user_kpis::share_price_used.is_not_null())
-            .filter(user_kpis::share_balance.is_not_null())
-            .order(user_kpis::calculated_at.asc())
-            .load::<Self>(conn)?;
-
-        // Convert KPI records to portfolio value time series
-        let portfolio_history = historical_kpis
-            .into_iter()
-            .filter_map(
-                |kpi| match (kpi.calculated_at, kpi.share_price_used, kpi.share_balance) {
-                    (Some(calculated_at), Some(share_price), Some(share_balance)) => {
-                        Some((calculated_at, share_balance * share_price))
-                    }
-                    _ => None,
-                },
-            )
-            .collect();
-
-        Ok(portfolio_history)
-    }
-
     /// Get historical performance data for a specific metric and timeframe
     /// Returns time series data for `all_time_pnl`, `unrealized_pnl`, or `realized_pnl`
     pub fn get_historical_performance(

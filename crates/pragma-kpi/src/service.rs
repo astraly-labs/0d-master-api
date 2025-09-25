@@ -4,28 +4,29 @@ use rust_decimal::Decimal;
 use std::time::Duration;
 
 use pragma_db::models::{
-    TransactionType, UserKpi, UserKpiUpdate, UserPosition, UserTransaction, Vault,
+    IndexerState, UserKpi, UserKpiUpdate, UserPortfolioHistory, UserPosition, UserTransaction,
+    Vault,
 };
 use pragma_master::VaultMasterAPIClient;
 
-use crate::{
-    calculate_max_drawdown, calculate_sharpe_ratio, calculate_sortino_ratio, calculate_user_pnl,
-};
+use crate::{calculate_risk_metrics, calculate_user_pnl};
 
 pub struct KpiService {
     db_pool: Pool,
 }
 
 impl KpiService {
-    const CALCULATION_INTERVAL: u64 = 24 * 60 * 60; // 24 hours
+    const CALCULATION_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60); // 24 hours
+    const WAIT_INDEXERS_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
 
     pub const fn new(db_pool: Pool) -> Self {
         Self { db_pool }
     }
 
     pub async fn run_forever(&self) -> anyhow::Result<()> {
-        // TODO: Wait for the indexer to be fully synced (or fixed hour run)
-        tokio::time::sleep(Duration::from_secs(20)).await;
+        // Wait for all indexers to be fully synced before starting KPI calculations
+        // TODO: Chose a fix hour to run the KPI calculations
+        self.wait_for_indexers_synced().await?;
 
         loop {
             if let Err(e) = self.run_daily_kpi_calculations().await {
@@ -33,8 +34,33 @@ impl KpiService {
             }
 
             // Sleep before next run (24 hours)
-            tokio::time::sleep(Duration::from_secs(Self::CALCULATION_INTERVAL)).await;
+            tokio::time::sleep(Self::CALCULATION_INTERVAL).await;
         }
+    }
+
+    /// Wait for all indexers to be fully synced before starting KPI calculations
+    async fn wait_for_indexers_synced(&self) -> anyhow::Result<()> {
+        tracing::info!("[KpiService] ⏳ Waiting for all indexers to be synced...");
+
+        loop {
+            tokio::time::sleep(Self::WAIT_INDEXERS_INTERVAL).await;
+
+            let conn = self.db_pool.get().await?;
+
+            let indexer_states = conn
+                .interact(IndexerState::find_all)
+                .await
+                .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database interaction failed: {e}"))?
+                .map_err(|e| {
+                    anyhow::anyhow!("[KpiService] 🗃️ Failed to load indexer states: {e}")
+                })?;
+
+            if indexer_states.iter().all(IndexerState::is_synced) {
+                break;
+            }
+        }
+
+        Ok(())
     }
 
     pub async fn run_daily_kpi_calculations(&self) -> anyhow::Result<()> {
@@ -117,44 +143,45 @@ impl KpiService {
         // Calculate PnL
         let pnl_result = calculate_user_pnl(position, &transactions, current_share_price)?;
 
-        // Get historical portfolio data for risk metrics
+        // Calculate current portfolio value
+        let current_portfolio_value = position.share_balance * current_share_price;
+
+        // Insert daily portfolio history snapshot
+        self.insert_daily_portfolio_history(
+            &position.user_address,
+            vault_id,
+            current_portfolio_value,
+            position.share_balance,
+            current_share_price,
+        )
+        .await?;
+
+        // Get historical portfolio data for risk metrics from portfolio history table
         let portfolio_history = self
-            .get_user_portfolio_history(&position.user_address, vault_id, current_share_price)
+            .get_user_portfolio_history(&position.user_address, vault_id)
             .await?;
 
         // Calculate risk metrics using historical data
-        let (max_drawdown_pct, sharpe_ratio, sortino_ratio) = if portfolio_history.len() >= 2 {
-            // TODO: Check for risk related values relevant to the vault
-            let risk_free_rate = Decimal::from(5) / Decimal::from(100); // 5% annualized
-            let daily_risk_free_rate = risk_free_rate / Decimal::from(365);
-
-            let max_drawdown = calculate_max_drawdown(&portfolio_history)?;
-            let sharpe = calculate_sharpe_ratio(&portfolio_history, risk_free_rate)?;
-            let sortino = calculate_sortino_ratio(&portfolio_history, daily_risk_free_rate)?;
-
-            (max_drawdown, sharpe, sortino)
-        } else {
-            (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO)
-        };
+        let risk_metrics = calculate_risk_metrics(&portfolio_history)?;
 
         // Create comprehensive KPI update
         let kpi_update = UserKpiUpdate {
             all_time_pnl: Some(pnl_result.all_time_pnl),
             unrealized_pnl: Some(pnl_result.unrealized_pnl),
             realized_pnl: Some(pnl_result.realized_pnl),
-            max_drawdown_pct: Some(max_drawdown_pct),
-            sharpe_ratio: Some(sharpe_ratio),
-            sortino_ratio: Some(sortino_ratio),
-            total_deposits: Some(Self::calculate_total_deposits(&transactions)),
-            total_withdrawals: Some(Self::calculate_total_withdrawals(&transactions)),
-            total_fees_paid: Some(Self::calculate_total_fees(&transactions)),
+            max_drawdown_pct: Some(risk_metrics.max_drawdown_pct),
+            sharpe_ratio: Some(risk_metrics.sharpe_ratio),
+            sortino_ratio: Some(risk_metrics.sortino_ratio),
+            total_deposits: Some(UserTransaction::calculate_total_deposits(&transactions)),
+            total_withdrawals: Some(UserTransaction::calculate_total_withdrawals(&transactions)),
+            total_fees_paid: Some(UserTransaction::calculate_total_fees(&transactions)),
             calculated_at: Some(Utc::now()),
             share_price_used: Some(current_share_price),
             share_balance: Some(position.share_balance), // Store current share balance
             updated_at: Some(Utc::now()),
         };
 
-        // Insert daily KPI record (create new record each day)
+        // Update current KPI record with latest values
         self.insert_daily_user_kpis(&position.user_address, vault_id, &kpi_update)
             .await?;
 
@@ -167,54 +194,24 @@ impl KpiService {
         &self,
         user_address: &str,
         vault_id: &str,
-        current_share_price: Decimal,
     ) -> anyhow::Result<Vec<(chrono::DateTime<Utc>, Decimal)>> {
         let conn = self.db_pool.get().await?;
         let user_address_clone = user_address.to_string();
         let vault_id_clone = vault_id.to_string();
 
-        // Get historical portfolio data from model
-        let mut portfolio_history = conn
+        // Get historical portfolio data from portfolio history table
+        let portfolio_history = conn
             .interact(move |conn| {
-                UserKpi::get_portfolio_history(&user_address_clone, &vault_id_clone, conn)
+                UserPortfolioHistory::get_portfolio_time_series(
+                    &user_address_clone,
+                    &vault_id_clone,
+                    conn,
+                )
             })
             .await
-            .map_err(|e| {
-                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
-            })??;
-
-        // Add current portfolio value if we have historical data
-        if !portfolio_history.is_empty() {
-            let current_position = self.get_user_position(user_address, vault_id).await?;
-            let current_portfolio_value = current_position.share_balance * current_share_price;
-            portfolio_history.push((Utc::now(), current_portfolio_value));
-        }
+            .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {e}"))??;
 
         Ok(portfolio_history)
-    }
-
-    /// Calculate total deposits from transactions
-    fn calculate_total_deposits(transactions: &[UserTransaction]) -> Decimal {
-        transactions
-            .iter()
-            .filter(|tx| tx.type_ == TransactionType::Deposit.as_str())
-            .map(|tx| tx.amount)
-            .sum()
-    }
-
-    /// Calculate total withdrawals from transactions
-    fn calculate_total_withdrawals(transactions: &[UserTransaction]) -> Decimal {
-        transactions
-            .iter()
-            .filter(|tx| tx.type_ == TransactionType::Withdraw.as_str())
-            .map(|tx| tx.amount)
-            .sum()
-    }
-
-    /// Calculate total fees paid from transactions
-    /// Currently calculates gas fees. Management/performance fees may need separate tracking.
-    fn calculate_total_fees(transactions: &[UserTransaction]) -> Decimal {
-        transactions.iter().filter_map(|tx| tx.gas_fee).sum()
     }
 
     /// Get all active vaults
@@ -224,7 +221,7 @@ impl KpiService {
         let vaults = conn
             .interact(Vault::find_live)
             .await
-            .map_err(|e| anyhow::anyhow!("Database error: {:?}", e))??;
+            .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database error: {e}"))??;
 
         Ok(vaults)
     }
@@ -237,9 +234,7 @@ impl KpiService {
         let positions = conn
             .interact(move |conn| UserPosition::find_active_by_vault(&vault_id_clone, conn))
             .await
-            .map_err(|e| {
-                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
-            })??;
+            .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {e}"))??;
 
         Ok(positions)
     }
@@ -263,11 +258,40 @@ impl KpiService {
                 )
             })
             .await
-            .map_err(|e| {
-                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
-            })??;
+            .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {e}"))??;
 
         Ok(transactions)
+    }
+
+    /// Insert daily portfolio history snapshot
+    async fn insert_daily_portfolio_history(
+        &self,
+        user_address: &str,
+        vault_id: &str,
+        portfolio_value: Decimal,
+        share_balance: Decimal,
+        share_price: Decimal,
+    ) -> anyhow::Result<()> {
+        let conn = self.db_pool.get().await?;
+        let user_address = user_address.to_string();
+        let vault_id = vault_id.to_string();
+        let calculated_at = Utc::now();
+
+        conn.interact(move |conn| {
+            UserPortfolioHistory::insert_daily_record(
+                &user_address,
+                &vault_id,
+                portfolio_value,
+                share_balance,
+                share_price,
+                calculated_at,
+                conn,
+            )
+        })
+        .await
+        .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {e}"))??;
+
+        Ok(())
     }
 
     /// Insert or update daily user KPI record (upserts to handle multiple runs per day)
@@ -284,33 +308,9 @@ impl KpiService {
 
         conn.interact(move |conn| UserKpi::upsert(&user_address, &vault_id, &kpi_data, conn))
             .await
-            .map_err(|e| {
-                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
-            })??;
+            .map_err(|e| anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {e}"))??;
 
         Ok(())
-    }
-
-    /// Get user position
-    async fn get_user_position(
-        &self,
-        user_address: &str,
-        vault_id: &str,
-    ) -> anyhow::Result<UserPosition> {
-        let conn = self.db_pool.get().await?;
-        let user_address_clone = user_address.to_string();
-        let vault_id_clone = vault_id.to_string();
-
-        let position = conn
-            .interact(move |conn| {
-                UserPosition::find_by_user_and_vault(&user_address_clone, &vault_id_clone, conn)
-            })
-            .await
-            .map_err(|e| {
-                anyhow::anyhow!("[KpiService] 🗃️ Database interaction error: {:?}", e)
-            })??;
-
-        Ok(position)
     }
 
     /// Fetch vault share price using `VaultMasterAPIClient`

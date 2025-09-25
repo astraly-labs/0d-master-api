@@ -15,6 +15,8 @@ pub enum ApiError {
     NotFound(String),
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Service unavailable: {0}")]
+    ServiceUnavailable(String),
     #[error("Internal server error")]
     InternalServerError,
 }
@@ -38,6 +40,7 @@ impl IntoResponse for ApiError {
             Self::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, msg),
             Self::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            Self::ServiceUnavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg),
             Self::InternalServerError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),

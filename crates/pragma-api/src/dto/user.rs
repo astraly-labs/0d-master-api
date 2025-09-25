@@ -74,6 +74,23 @@ pub struct HistoricalUserPerformance {
     pub points: Vec<HistoricalDataPoint>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PendingRedeem {
+    pub vault_id: String,
+    pub amount: String,
+    pub transaction_type: TransactionType,
+    pub tx_hash: String,
+    pub submitted_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PendingRedeemsResponse {
+    pub address: String,
+    pub as_of: DateTime<Utc>,
+    pub pending_redeems: Vec<PendingRedeem>,
+    pub total_pending: String,
+}
+
 impl From<pragma_db::models::User> for UserProfile {
     fn from(user: pragma_db::models::User) -> Self {
         Self {
@@ -106,6 +123,24 @@ impl From<pragma_db::models::UserTransaction> for UserTransaction {
             amount: tx.amount.to_string(),
             tx_hash: tx.tx_hash,
             timestamp: tx.block_timestamp,
+        }
+    }
+}
+
+impl From<pragma_db::models::UserTransaction> for PendingRedeem {
+    fn from(tx: pragma_db::models::UserTransaction) -> Self {
+        Self {
+            vault_id: tx.vault_id,
+            amount: tx.amount.to_string(),
+            transaction_type: match tx.type_.as_str() {
+                "deposit" => TransactionType::Deposit,
+                "withdraw" => TransactionType::Withdraw,
+                "transfer" => TransactionType::Transfer,
+                "claim" => TransactionType::Claim,
+                _ => unreachable!("Invalid transaction type: {}", tx.type_),
+            },
+            tx_hash: tx.tx_hash,
+            submitted_at: tx.block_timestamp,
         }
     }
 }

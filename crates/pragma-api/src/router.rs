@@ -8,10 +8,8 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{AppState, handlers};
 
-pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
-    let open_api = T::openapi();
-    // Group vault-related endpoints under a dedicated "/vaults" router
-    let vaults_router = Router::new()
+fn create_vaults_router() -> Router<AppState> {
+    Router::new()
         .route("/", get(handlers::list_vaults))
         .route("/{vault_id}", get(handlers::get_vault))
         .route("/{vault_id}/stats", get(handlers::get_vault_stats))
@@ -50,11 +48,16 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
             "/{vault_id}/nav/latest",
             get(handlers::get_vault_nav_latest),
         )
-        .route("/{vault_id}/info", get(handlers::get_vault_info));
+        .route("/{vault_id}/info", get(handlers::get_vault_info))
+}
 
-    // Group user-related endpoints under a dedicated "/users" router
-    let users_router = Router::new()
+fn create_users_router() -> Router<AppState> {
+    Router::new()
         .route("/{address}", get(handlers::get_user_profile))
+        .route(
+            "/{address}/redeems",
+            get(handlers::get_user_pending_redeems),
+        )
         .route(
             "/{address}/vaults/{vault_id}/summary",
             get(handlers::get_user_position_summary),
@@ -70,12 +73,16 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
         .route(
             "/{address}/vaults/{vault_id}/historical",
             get(handlers::get_historical_user_performance),
-        );
+        )
+}
+
+pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
+    let open_api = T::openapi();
 
     Router::new()
         .route("/health", get(health))
-        .nest("/v1/vaults", vaults_router)
-        .nest("/v1/users", users_router)
+        .nest("/v1/vaults", create_vaults_router())
+        .nest("/v1/users", create_users_router())
         .merge(SwaggerUi::new("/v1/docs").url("/v1/docs/openapi.json", open_api))
         .fallback(handler_404)
 }

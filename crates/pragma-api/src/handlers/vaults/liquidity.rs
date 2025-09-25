@@ -9,7 +9,11 @@ use pragma_master::{
     LiquidityDTO, LiquiditySimulateResponseDTO, SlippageCurveDTO, VaultMasterAPIClient,
 };
 
-use crate::{AppState, dto::LiquiditySimulateRequest, errors::ApiError};
+use crate::{
+    AppState,
+    dto::{ApiResponse, LiquiditySimulateRequest},
+    errors::ApiError,
+};
 
 #[utoipa::path(
     get,
@@ -58,7 +62,7 @@ pub async fn get_vault_liquidity(
         ApiError::InternalServerError
     })?;
 
-    Ok(Json(liquidity))
+    Ok(Json(ApiResponse::ok(liquidity)))
 }
 
 #[utoipa::path(
@@ -108,7 +112,7 @@ pub async fn get_vault_slippage_curve(
         ApiError::InternalServerError
     })?;
 
-    Ok(Json(curve))
+    Ok(Json(ApiResponse::ok(curve)))
 }
 
 #[utoipa::path(
@@ -171,5 +175,5 @@ pub async fn simulate_vault_liquidity(
             ApiError::InternalServerError
         })?;
 
-    Ok(Json(simulation))
+    Ok(Json(ApiResponse::ok(simulation)))
 }

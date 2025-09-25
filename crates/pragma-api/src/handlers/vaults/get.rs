@@ -5,7 +5,11 @@ use axum::{
 };
 
 use crate::helpers::map_status;
-use crate::{AppState, dto::Vault as VaultDto, errors::ApiError};
+use crate::{
+    AppState,
+    dto::{ApiResponse, Vault as VaultDto},
+    errors::ApiError,
+};
 use pragma_db::models::Vault;
 use pragma_master::VaultMasterAPIClient;
 
@@ -66,5 +70,5 @@ pub async fn get_vault(
     dto.tvl = vault_stats.tvl;
     dto.share_price = share_price;
 
-    Ok(Json(dto))
+    Ok(Json(ApiResponse::ok(dto)))
 }

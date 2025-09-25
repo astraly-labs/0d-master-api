@@ -10,6 +10,7 @@ pub enum IndexerStatus {
     Active,
     Paused,
     Error,
+    Synced,
 }
 
 impl IndexerStatus {
@@ -19,6 +20,7 @@ impl IndexerStatus {
             Self::Active => "active",
             Self::Paused => "paused",
             Self::Error => "error",
+            Self::Synced => "synced",
         }
     }
 }
@@ -41,6 +43,7 @@ impl From<String> for IndexerStatus {
             "active" => Self::Active,
             "paused" => Self::Paused,
             "error" => Self::Error,
+            "synced" => Self::Synced,
             _ => unreachable!("Invalid indexer status: {s}"),
         }
     }
@@ -52,6 +55,7 @@ impl From<&str> for IndexerStatus {
             "active" => Self::Active,
             "paused" => Self::Paused,
             "error" => Self::Error,
+            "synced" => Self::Synced,
             _ => unreachable!("Invalid indexer status: {s}"),
         }
     }
@@ -93,6 +97,11 @@ impl IndexerState {
     pub fn is_running(&self) -> bool {
         self.status_enum() == Some(IndexerStatus::Active)
     }
+
+    /// Check if the indexer is synced
+    pub fn is_synced(&self) -> bool {
+        self.status_enum() == Some(IndexerStatus::Synced)
+    }
 }
 
 #[derive(Insertable, Serialize, Deserialize, Debug, Clone)]
@@ -118,6 +127,11 @@ pub struct IndexerStateUpdate {
 }
 
 impl IndexerState {
+    /// Find all indexer states
+    pub fn find_all(conn: &mut PgConnection) -> QueryResult<Vec<Self>> {
+        indexer_state::table.load::<Self>(conn)
+    }
+
     /// Find indexer state by `vault_id`
     pub fn find_by_vault_id(
         vault_id: &str,
@@ -188,6 +202,36 @@ impl IndexerState {
             }
             Err(e) => Err(e),
         }
+    }
+
+    /// Update indexer state with status preservation
+    pub fn update_with_status_preservation(
+        vault_id: &str,
+        last_processed_block: i64,
+        last_processed_timestamp: Option<DateTime<Utc>>,
+        conn: &mut PgConnection,
+    ) -> Result<Self, diesel::result::Error> {
+        // Get current state to check status
+        let current_state = Self::find_by_vault_id(vault_id, conn)?;
+
+        // Preserve synced status, otherwise set to active
+        let new_status = if current_state.is_synced() {
+            IndexerStatus::Synced
+        } else {
+            IndexerStatus::Active
+        };
+
+        // Update with preserved status
+        let updates = IndexerStateUpdate {
+            last_processed_block: Some(last_processed_block),
+            last_processed_timestamp,
+            status: Some(new_status.as_str().to_string()),
+            last_error: None, // Clear any previous errors
+            last_error_at: None,
+            updated_at: Some(Utc::now()),
+        };
+
+        current_state.update(&updates, conn)
     }
 
     /// Record an error for the indexer state

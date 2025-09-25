@@ -59,6 +59,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_portfolio_history (id) {
+        id -> Int4,
+        #[max_length = 100]
+        user_address -> Varchar,
+        #[max_length = 50]
+        vault_id -> Varchar,
+        portfolio_value -> Numeric,
+        share_balance -> Numeric,
+        share_price -> Numeric,
+        calculated_at -> Timestamptz,
+        created_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     user_positions (id) {
         id -> Int4,
         #[max_length = 100]
@@ -167,6 +182,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     api_logs,
     indexer_state,
     user_kpis,
+    user_portfolio_history,
     user_positions,
     user_transactions,
     users,

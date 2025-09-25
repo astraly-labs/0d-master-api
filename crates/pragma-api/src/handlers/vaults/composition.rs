@@ -9,7 +9,7 @@ use pragma_master::{CompositionDTO, CompositionSeriesDTO, VaultMasterAPIClient};
 
 use crate::{
     AppState,
-    dto::{CompositionQuery, CompositionSeriesQuery},
+    dto::{ApiResponse, CompositionQuery, CompositionSeriesQuery},
     errors::ApiError,
 };
 
@@ -73,7 +73,7 @@ pub async fn get_vault_composition(
             ApiError::InternalServerError
         })?;
 
-    Ok(Json(composition))
+    Ok(Json(ApiResponse::ok(composition)))
 }
 
 #[utoipa::path(
@@ -144,5 +144,5 @@ pub async fn get_vault_composition_series(
             ApiError::InternalServerError
         })?;
 
-    Ok(Json(composition_series))
+    Ok(Json(ApiResponse::ok(composition_series)))
 }

@@ -7,11 +7,13 @@ use serde::Deserialize;
 
 use crate::{
     AppState,
+    dto::ApiResponse,
     dto::{
         DisplayCurrency, HistoricalDataPoint, HistoricalUserPerformance, PerformanceMetric,
         Timeframe,
     },
     errors::ApiError,
+    helpers::validate_indexer_status,
 };
 use pragma_db::models::UserKpi;
 
@@ -47,6 +49,7 @@ const fn default_currency() -> DisplayCurrency {
         (status = 200, description = "Historical User performance", body = HistoricalUserPerformance),
         (status = 404, description = "User or vault not found"),
         (status = 400, description = "Invalid parameters"),
+        (status = 503, description = "Indexer not synced or experiencing issues"),
         (status = 500, description = "Internal server error")
     )
 )]
@@ -55,6 +58,9 @@ pub async fn get_historical_user_performance(
     Path((address, vault_id)): Path<(String, String)>,
     Query(query): Query<HistoricalQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
+    // Validate that the indexer is synced before serving user data
+    validate_indexer_status(&vault_id, &state.pool).await?;
+
     let conn = state.pool.get().await.map_err(|e| {
         tracing::error!("Failed to get database connection: {}", e);
         ApiError::InternalServerError
@@ -116,5 +122,5 @@ pub async fn get_historical_user_performance(
         points,
     };
 
-    Ok(Json(response))
+    Ok(Json(ApiResponse::ok(response)))
 }

@@ -461,4 +461,28 @@ impl UserTransaction {
             ))
             .get_result(conn)
     }
+
+    /// Calculate total deposits from a collection of transactions
+    pub fn calculate_total_deposits(transactions: &[Self]) -> Decimal {
+        transactions
+            .iter()
+            .filter(|tx| tx.type_ == TransactionType::Deposit.as_str())
+            .map(|tx| tx.amount)
+            .sum()
+    }
+
+    /// Calculate total withdrawals from a collection of transactions
+    pub fn calculate_total_withdrawals(transactions: &[Self]) -> Decimal {
+        transactions
+            .iter()
+            .filter(|tx| tx.type_ == TransactionType::Withdraw.as_str())
+            .map(|tx| tx.amount)
+            .sum()
+    }
+
+    /// Calculate total fees paid from a collection of transactions
+    /// Currently calculates gas fees. Management/performance fees may need separate tracking.
+    pub fn calculate_total_fees(transactions: &[Self]) -> Decimal {
+        transactions.iter().filter_map(|tx| tx.gas_fee).sum()
+    }
 }

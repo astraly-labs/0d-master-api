@@ -7,7 +7,11 @@ use axum::{
 use pragma_db::models::Vault;
 use pragma_master::{TimeseriesResponseDTO, VaultMasterAPIClient};
 
-use crate::{AppState, dto::TimeseriesQuery, errors::ApiError};
+use crate::{
+    AppState,
+    dto::{ApiResponse, TimeseriesQuery},
+    errors::ApiError,
+};
 
 #[utoipa::path(
     get,
@@ -97,5 +101,5 @@ pub async fn get_vault_timeseries(
             ApiError::InternalServerError
         })?;
 
-    Ok(Json(timeseries))
+    Ok(Json(ApiResponse::ok(timeseries)))
 }
