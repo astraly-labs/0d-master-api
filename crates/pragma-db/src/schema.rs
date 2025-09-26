@@ -27,6 +27,7 @@ diesel::table! {
         #[max_length = 100]
         user_address -> Varchar,
         amount -> Numeric,
+        #[max_length = 100]
         referral_code -> Nullable<Varchar>,
         transaction -> Jsonb,
         #[max_length = 100]
@@ -193,6 +194,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(deposit_requests -> vaults (vault_id));
 diesel::joinable!(indexer_state -> vaults (vault_id));
 diesel::joinable!(user_kpis -> users (user_address));
 diesel::joinable!(user_kpis -> vaults (vault_id));
@@ -200,7 +202,6 @@ diesel::joinable!(user_positions -> users (user_address));
 diesel::joinable!(user_positions -> vaults (vault_id));
 diesel::joinable!(user_transactions -> users (user_address));
 diesel::joinable!(user_transactions -> vaults (vault_id));
-diesel::joinable!(deposit_requests -> vaults (vault_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     api_logs,

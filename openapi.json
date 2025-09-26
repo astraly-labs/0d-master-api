@@ -7,7 +7,7 @@
       "name": "MIT",
       "identifier": "MIT"
     },
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "servers": [
     {
@@ -672,6 +672,59 @@
           },
           "500": {
             "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vaults/{vault_id}/deposit": {
+      "post": {
+        "tags": [
+          "Vaults"
+        ],
+        "operationId": "submit_vault_deposit",
+        "parameters": [
+          {
+            "name": "vault_id",
+            "in": "path",
+            "description": "Vault identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VaultDepositRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Deposit request accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultDepositResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid deposit request"
+          },
+          "404": {
+            "description": "Vault not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "503": {
+            "description": "Failed to submit transaction"
           }
         }
       }
@@ -2029,6 +2082,66 @@
             "$ref": "#/components/schemas/WithdrawConstraints"
           }
         }
+      },
+      "VaultDepositRequest": {
+        "type": "object",
+        "required": [
+          "user_address",
+          "amount",
+          "transaction"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "referral_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "transaction": {
+            "type": "object"
+          },
+          "user_address": {
+            "type": "string"
+          }
+        }
+      },
+      "VaultDepositResponse": {
+        "type": "object",
+        "required": [
+          "request_id",
+          "status"
+        ],
+        "properties": {
+          "referral_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/VaultDepositStatus"
+          },
+          "tx_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "VaultDepositStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "submitted",
+          "failed"
+        ]
       },
       "VaultInfoDTO": {
         "type": "object",

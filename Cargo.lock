@@ -2655,7 +2655,7 @@ dependencies = [
 
 [[package]]
 name = "pragma-api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2689,7 +2689,7 @@ dependencies = [
 
 [[package]]
 name = "pragma-bin"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2741,7 +2741,7 @@ dependencies = [
 
 [[package]]
 name = "pragma-db"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bigdecimal",
@@ -2763,7 +2763,7 @@ dependencies = [
 
 [[package]]
 name = "pragma-indexer"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2783,7 +2783,7 @@ dependencies = [
 
 [[package]]
 name = "pragma-kpi"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2804,7 +2804,7 @@ dependencies = [
 
 [[package]]
 name = "pragma-master"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "chrono",
