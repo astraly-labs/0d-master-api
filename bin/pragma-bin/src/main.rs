@@ -50,7 +50,10 @@ async fn main() -> Result<()> {
     let pool = init_pool(app_name, &database_url)?;
     run_migrations(&pool).await;
 
-    let app_state = AppState { pool: pool.clone() };
+    let app_state = AppState {
+        pool: pool.clone(),
+        starknet_provider: starknet_provider.clone(),
+    };
 
     let api_service = ApiService::new(app_state, "0.0.0.0", api_port);
 

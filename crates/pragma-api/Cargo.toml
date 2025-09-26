@@ -38,6 +38,8 @@ utoipa.workspace = true
 utoipa-swagger-ui.workspace = true
 utoipauto.workspace = true
 rust_decimal.workspace = true
+uuid.workspace = true
+starknet.workspace = true
 
 axum-tracing-opentelemetry.workspace = true
 reqwest.workspace = true

@@ -1,3 +1,4 @@
+pub mod deposit_request;
 pub mod indexer_state;
 pub mod user;
 pub mod user_kpi;
@@ -6,6 +7,9 @@ pub mod user_position;
 pub mod user_transaction;
 pub mod vault;
 
+pub use deposit_request::{
+    DepositRequest, DepositRequestStatus, DepositRequestUpdate, NewDepositRequest,
+};
 pub use indexer_state::{IndexerState, IndexerStateUpdate, IndexerStatus, NewIndexerState};
 pub use user::{NewUser, User};
 pub use user_kpi::{NewUserKpi, UserKpi, UserKpiUpdate};

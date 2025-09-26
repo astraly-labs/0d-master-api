@@ -19,6 +19,29 @@ diesel::table! {
 }
 
 diesel::table! {
+    deposit_requests (id) {
+        #[max_length = 36]
+        id -> Varchar,
+        #[max_length = 50]
+        vault_id -> Varchar,
+        #[max_length = 100]
+        user_address -> Varchar,
+        amount -> Numeric,
+        referral_code -> Nullable<Varchar>,
+        transaction -> Jsonb,
+        #[max_length = 100]
+        tx_hash -> Nullable<Varchar>,
+        #[max_length = 20]
+        status -> Varchar,
+        #[max_length = 64]
+        error_code -> Nullable<Varchar>,
+        error_message -> Nullable<Text>,
+        created_at -> Nullable<Timestamptz>,
+        updated_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     indexer_state (id) {
         id -> Int4,
         #[max_length = 50]
@@ -177,9 +200,11 @@ diesel::joinable!(user_positions -> users (user_address));
 diesel::joinable!(user_positions -> vaults (vault_id));
 diesel::joinable!(user_transactions -> users (user_address));
 diesel::joinable!(user_transactions -> vaults (vault_id));
+diesel::joinable!(deposit_requests -> vaults (vault_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     api_logs,
+    deposit_requests,
     indexer_state,
     user_kpis,
     user_portfolio_history,

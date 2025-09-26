@@ -27,6 +27,7 @@ fn create_vaults_router() -> Router<AppState> {
             "/{vault_id}/liquidity/simulate",
             post(handlers::simulate_vault_liquidity),
         )
+        .route("/{vault_id}/deposit", post(handlers::submit_vault_deposit))
         .route(
             "/{vault_id}/apr/summary",
             get(handlers::get_vault_apr_summary),

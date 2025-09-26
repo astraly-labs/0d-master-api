@@ -79,6 +79,7 @@ pragma-common = { version = "0.4.1", features = [
     "serde",
     "utoipa",
     "services",
+    "starknet",
 ] }
 evian = { version = "0.1.97", registry = "pragma", features = [
     "pragma_oracle",

@@ -15,7 +15,10 @@ use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::cors::CorsLayer;
 
-use pragma_common::services::{Service, ServiceRunner};
+use pragma_common::{
+    services::{Service, ServiceRunner},
+    starknet::FallbackProvider,
+};
 
 use docs::ApiDoc;
 use router::api_router;
@@ -23,6 +26,7 @@ use router::api_router;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: Pool,
+    pub starknet_provider: FallbackProvider,
 }
 
 pub struct ApiService {

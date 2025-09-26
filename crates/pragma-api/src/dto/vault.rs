@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -86,6 +87,34 @@ pub enum TimeseriesCurrency {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LiquiditySimulateRequest {
     pub amount: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultDepositRequest {
+    pub user_address: String,
+    pub amount: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub referral_code: Option<String>,
+    #[schema(value_type = Object)]
+    pub transaction: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultDepositResponse {
+    pub request_id: String,
+    pub status: VaultDepositStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tx_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub referral_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum VaultDepositStatus {
+    Pending,
+    Submitted,
+    Failed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

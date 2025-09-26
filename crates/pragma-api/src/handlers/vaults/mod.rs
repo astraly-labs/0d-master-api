@@ -1,5 +1,6 @@
 pub mod apr;
 pub mod composition;
+pub mod deposit;
 pub mod get;
 pub mod kpis;
 pub mod liquidity;
@@ -10,6 +11,7 @@ pub mod timeseries;
 
 pub use apr::{get_vault_apr_series, get_vault_apr_summary};
 pub use composition::{get_vault_composition, get_vault_composition_series};
+pub use deposit::submit_vault_deposit;
 pub use get::get_vault;
 pub use kpis::get_vault_kpis;
 pub use liquidity::{get_vault_liquidity, get_vault_slippage_curve, simulate_vault_liquidity};
