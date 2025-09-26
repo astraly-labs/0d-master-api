@@ -1237,9 +1237,9 @@ dependencies = [
 
 [[package]]
 name = "evian"
-version = "0.1.95"
+version = "0.1.97"
 source = "sparse+https://registry.devnet.pragma.build/api/v1/crates/"
-checksum = "90d8258057a955c6487cde9d3ff24838b964ce134ed69a2996acd1d7f57bf91c"
+checksum = "b9c15a39f3d07adf12ab3a755a57ca4af66865eb01cbd1dd8f862ff22bc048fc"
 dependencies = [
  "anyhow",
  "apibara-dna-protocol",
