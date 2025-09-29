@@ -5,9 +5,9 @@ use axum::{
 };
 
 use pragma_db::models::Vault;
-use pragma_master::{GetStatsDTO, VaultMasterAPIClient};
+use pragma_master::{GetStatsDTO, VaultAlternativeAPIClient, VaultMasterAPIClient};
 
-use crate::{AppState, dto::ApiResponse, errors::ApiError};
+use crate::{AppState, dto::ApiResponse, errors::ApiError, helpers::is_alternative_vault};
 
 #[utoipa::path(
     get,
@@ -50,11 +50,19 @@ pub async fn get_vault_stats(
         })?;
 
     // Call the vault's portfolio/stats endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let vault_stats = client.get_vault_stats().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault stats: {}", e);
-        ApiError::InternalServerError
-    })?;
+    let vault_stats = if is_alternative_vault(&vault.id) {
+        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        client.get_vault_stats().await.map_err(|e| {
+            tracing::error!("Failed to fetch alternative vault stats: {}", e);
+            ApiError::InternalServerError
+        })?
+    } else {
+        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        client.get_vault_stats().await.map_err(|e| {
+            tracing::error!("Failed to fetch vault stats: {}", e);
+            ApiError::InternalServerError
+        })?
+    };
 
     Ok(Json(ApiResponse::ok(vault_stats)))
 }

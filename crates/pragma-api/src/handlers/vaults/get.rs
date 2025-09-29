@@ -4,14 +4,14 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::helpers::map_status;
+use crate::helpers::{is_alternative_vault, map_status};
 use crate::{
     AppState,
     dto::{ApiResponse, Vault as VaultDto},
     errors::ApiError,
 };
 use pragma_db::models::Vault;
-use pragma_master::VaultMasterAPIClient;
+use pragma_master::{VaultAlternativeAPIClient, VaultMasterAPIClient};
 
 #[utoipa::path(
     get,
@@ -53,15 +53,29 @@ pub async fn get_vault(
         })?;
 
     // Fetch non-metadata (tvl & share_price) from the vault's API endpoint.
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let vault_stats = client.get_vault_stats().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault stats: {}", e);
-        ApiError::InternalServerError
-    })?;
-    let share_price = client.get_vault_share_price().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault share price: {}", e);
-        ApiError::InternalServerError
-    })?;
+    let (vault_stats, share_price) = if is_alternative_vault(&vault.id) {
+        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        let stats = client.get_vault_stats().await.map_err(|e| {
+            tracing::error!("Failed to fetch alternative vault stats: {}", e);
+            ApiError::InternalServerError
+        })?;
+        let share_price = client.get_vault_share_price().await.map_err(|e| {
+            tracing::error!("Failed to fetch alternative vault share price: {}", e);
+            ApiError::InternalServerError
+        })?;
+        (stats, share_price)
+    } else {
+        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        let stats = client.get_vault_stats().await.map_err(|e| {
+            tracing::error!("Failed to fetch vault stats: {}", e);
+            ApiError::InternalServerError
+        })?;
+        let share_price = client.get_vault_share_price().await.map_err(|e| {
+            tracing::error!("Failed to fetch vault share price: {}", e);
+            ApiError::InternalServerError
+        })?;
+        (stats, share_price)
+    };
 
     // Build response DTO and embed live values.
     let mut dto = VaultDto::from(vault);

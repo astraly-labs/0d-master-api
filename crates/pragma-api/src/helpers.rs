@@ -9,6 +9,14 @@ pub fn map_status(status: &str) -> String {
     }
 }
 
+/// Vaults 2 through 6 rely on the alternative vault API
+pub fn is_alternative_vault(vault_id: &str) -> bool {
+    vault_id
+        .parse::<i32>()
+        .map(|id| (2..=6).contains(&id))
+        .unwrap_or(false)
+}
+
 /// Check if the indexer is ready to serve data for a vault
 /// Returns an error if the indexer is not synced or has errors
 pub async fn validate_indexer_status(

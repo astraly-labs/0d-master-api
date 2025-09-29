@@ -4,10 +4,10 @@ use crate::{
     AppState,
     dto::{ApiResponse, VaultListItem, VaultListResponse},
     errors::ApiError,
-    helpers::map_status,
+    helpers::{is_alternative_vault, map_status},
 };
 use pragma_db::models::Vault;
-use pragma_master::VaultMasterAPIClient;
+use pragma_master::{VaultAlternativeAPIClient, VaultMasterAPIClient};
 use reqwest::StatusCode as HttpStatusCode;
 
 #[utoipa::path(
@@ -42,14 +42,25 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
 
     let mut items = Vec::with_capacity(vaults.len());
     for vault in vaults {
-        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-
-        let tvl = if let Ok(p) = client.get_vault_stats().await {
-            p.tvl
+        let tvl = if is_alternative_vault(&vault.id) {
+            let client =
+                VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+            match client.get_vault_stats().await {
+                Ok(stats) => stats.tvl,
+                Err(err) => {
+                    tracing::warn!(vault_id = %vault.id, error = %err, "Failed to fetch alternative vault stats");
+                    "0".to_string()
+                }
+            }
         } else {
-            let code: Option<HttpStatusCode> = None;
-            tracing::warn!(vault_id = %vault.id, status = ?code, "Failed to fetch vault stats");
-            "0".to_string()
+            let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+            if let Ok(p) = client.get_vault_stats().await {
+                p.tvl
+            } else {
+                let code: Option<HttpStatusCode> = None;
+                tracing::warn!(vault_id = %vault.id, status = ?code, "Failed to fetch vault stats");
+                "0".to_string()
+            }
         };
 
         // Map DB status to API spec values: active -> live

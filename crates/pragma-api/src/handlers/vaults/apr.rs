@@ -5,12 +5,13 @@ use axum::{
 };
 
 use pragma_db::models::Vault;
-use pragma_master::{AprSeriesDTO, AprSummaryDTO, VaultMasterAPIClient};
+use pragma_master::{AprSeriesDTO, AprSummaryDTO, VaultAlternativeAPIClient, VaultMasterAPIClient};
 
 use crate::{
     AppState,
     dto::{ApiResponse, AprSeriesQuery, AprSummaryQuery},
     errors::ApiError,
+    helpers::is_alternative_vault,
 };
 
 #[utoipa::path(
@@ -64,14 +65,25 @@ pub async fn get_vault_apr_summary(
         })?;
 
     // Call the vault's APR summary endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let apr_summary = client
-        .get_vault_apr_summary(&params.apr_basis)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch vault APR summary: {}", e);
-            ApiError::InternalServerError
-        })?;
+    let apr_summary = if is_alternative_vault(&vault.id) {
+        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        client
+            .get_vault_apr_summary(&params.apr_basis)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to fetch alternative vault APR summary: {}", e);
+                ApiError::InternalServerError
+            })?
+    } else {
+        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        client
+            .get_vault_apr_summary(&params.apr_basis)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to fetch vault APR summary: {}", e);
+                ApiError::InternalServerError
+            })?
+    };
 
     Ok(Json(ApiResponse::ok(apr_summary)))
 }
@@ -127,14 +139,25 @@ pub async fn get_vault_apr_series(
         })?;
 
     // Call the vault's APR series endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let apr_series = client
-        .get_vault_apr_series(&params.timeframe)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch vault APR series: {}", e);
-            ApiError::InternalServerError
-        })?;
+    let apr_series = if is_alternative_vault(&vault.id) {
+        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        client
+            .get_vault_apr_series(&params.timeframe)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to fetch alternative vault APR series: {}", e);
+                ApiError::InternalServerError
+            })?
+    } else {
+        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        client
+            .get_vault_apr_series(&params.timeframe)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to fetch vault APR series: {}", e);
+                ApiError::InternalServerError
+            })?
+    };
 
     Ok(Json(ApiResponse::ok(apr_series)))
 }
