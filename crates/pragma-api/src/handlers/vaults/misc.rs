@@ -5,12 +5,13 @@ use axum::{
 };
 
 use pragma_db::models::Vault;
-use pragma_master::{CapsDTO, NavLatestDTO, VaultMasterAPIClient};
+use pragma_master::{CapsDTO, NavLatestDTO, VaultAlternativeAPIClient, VaultMasterAPIClient};
 
 use crate::{
     AppState,
     dto::{ApiResponse, VaultInfoDTO},
     errors::ApiError,
+    helpers::is_alternative_vault,
 };
 
 #[utoipa::path(
@@ -104,11 +105,19 @@ pub async fn get_vault_nav_latest(
         })?;
 
     // Call the vault's NAV latest endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-    let nav_latest = client.get_vault_nav_latest().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault NAV latest: {}", e);
-        ApiError::InternalServerError
-    })?;
+    let nav_latest = if is_alternative_vault(&vault.id) {
+        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        client.get_vault_nav_latest().await.map_err(|e| {
+            tracing::error!("Failed to fetch alternative vault NAV latest: {}", e);
+            ApiError::InternalServerError
+        })?
+    } else {
+        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        client.get_vault_nav_latest().await.map_err(|e| {
+            tracing::error!("Failed to fetch vault NAV latest: {}", e);
+            ApiError::InternalServerError
+        })?
+    };
 
     Ok(Json(ApiResponse::ok(nav_latest)))
 }

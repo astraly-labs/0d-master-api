@@ -10,6 +10,8 @@ pub struct VaultListItem {
     pub symbol: String,
     pub tvl: String,
     pub status: String,
+    pub average_redeem_delay: Option<String>,
+    pub last_reported: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

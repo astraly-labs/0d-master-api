@@ -2078,6 +2078,12 @@
           "status"
         ],
         "properties": {
+          "average_redeem_delay": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "chain": {
             "type": "string"
           },
@@ -2089,6 +2095,12 @@
           },
           "id": {
             "type": "string"
+          },
+          "last_reported": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "name": {
             "type": "string"

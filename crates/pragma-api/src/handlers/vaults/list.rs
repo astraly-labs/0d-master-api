@@ -42,24 +42,31 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
 
     let mut items = Vec::with_capacity(vaults.len());
     for vault in vaults {
-        let tvl = if is_alternative_vault(&vault.id) {
+        let (tvl, average_redeem_delay, last_reported) = if is_alternative_vault(&vault.id) {
             let client =
                 VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
-            match client.get_vault_stats().await {
-                Ok(stats) => stats.tvl,
+            match client.get_vault().await {
+                Ok(data) => {
+                    let tvl = data.tvl.unwrap_or_else(|| "0".to_string());
+                    (tvl, data.average_redeem_delay, data.last_reported)
+                }
                 Err(err) => {
-                    tracing::warn!(vault_id = %vault.id, error = %err, "Failed to fetch alternative vault stats");
-                    "0".to_string()
+                    tracing::warn!(
+                        vault_id = %vault.id,
+                        error = %err,
+                        "Failed to fetch alternative vault snapshot"
+                    );
+                    ("0".to_string(), None, None)
                 }
             }
         } else {
             let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
             if let Ok(p) = client.get_vault_stats().await {
-                p.tvl
+                (p.tvl, None, None)
             } else {
                 let code: Option<HttpStatusCode> = None;
                 tracing::warn!(vault_id = %vault.id, status = ?code, "Failed to fetch vault stats");
-                "0".to_string()
+                ("0".to_string(), None, None)
             }
         };
 
@@ -74,6 +81,8 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
             symbol: vault.symbol,
             tvl,
             status,
+            average_redeem_delay,
+            last_reported,
         });
     }
 
