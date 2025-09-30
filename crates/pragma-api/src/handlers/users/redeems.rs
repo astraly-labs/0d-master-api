@@ -4,7 +4,6 @@ use axum::{
     response::IntoResponse,
 };
 use chrono::Utc;
-use diesel::prelude::*;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -13,7 +12,7 @@ use crate::{
     dto::{ApiResponse, PendingRedeem, user::PendingRedeemsResponse},
     errors::ApiError,
 };
-use pragma_db::models::{TransactionStatus, User, user_transaction::UserTransaction};
+use pragma_db::models::{User, user_transaction::UserTransaction};
 
 #[derive(Debug, Deserialize)]
 pub struct PendingRedeemsQuery {
@@ -68,20 +67,7 @@ pub async fn get_user_pending_redeems(
     let vault_id_filter = query.vault_id.clone();
     let pending_user_txs: Vec<UserTransaction> = conn
         .interact(move |conn| {
-            use pragma_db::schema::user_transactions::dsl;
-
-            let mut query = dsl::user_transactions
-                .filter(dsl::user_address.eq(&address_clone))
-                .filter(dsl::status.eq(TransactionStatus::Pending.as_str()))
-                .into_boxed();
-
-            if let Some(vault_id) = vault_id_filter {
-                query = query.filter(dsl::vault_id.eq(vault_id));
-            }
-
-            query
-                .order(dsl::block_timestamp.desc())
-                .load::<UserTransaction>(conn)
+            UserTransaction::find_pending_by_user(&address_clone, vault_id_filter.as_deref(), conn)
         })
         .await
         .map_err(|e| {
@@ -105,11 +91,33 @@ pub async fn get_user_pending_redeems(
         .map(|asset| asset.amount.parse::<Decimal>().unwrap_or_default())
         .sum();
 
+    // Calculate average redeem delay
+    let address_clone = address.clone();
+    let vault_id_for_delay = query.vault_id.clone();
+    let average_redeem_delay = conn
+        .interact(move |conn| {
+            UserTransaction::calculate_average_redeem_delay(
+                &address_clone,
+                vault_id_for_delay.as_deref(),
+                conn,
+            )
+        })
+        .await
+        .map_err(|e| {
+            tracing::error!("Database interaction error: {e}");
+            ApiError::InternalServerError
+        })?
+        .map_err(|e| {
+            tracing::error!("Failed to calculate average redeem delay: {e}");
+            ApiError::InternalServerError
+        })?;
+
     let response = PendingRedeemsResponse {
         address: address.clone(),
         as_of: Utc::now(),
         pending_redeems,
         total_pending: total_pending.to_string(),
+        average_redeem_delay,
     };
 
     Ok(Json(ApiResponse::ok(response)))

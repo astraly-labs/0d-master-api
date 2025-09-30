@@ -1584,6 +1584,13 @@
             "type": "string",
             "format": "date-time"
           },
+          "average_redeem_delay": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
           "pending_redeems": {
             "type": "array",
             "items": {

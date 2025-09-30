@@ -89,6 +89,7 @@ pub struct PendingRedeemsResponse {
     pub as_of: DateTime<Utc>,
     pub pending_redeems: Vec<PendingRedeem>,
     pub total_pending: String,
+    pub average_redeem_delay: Option<i64>,
 }
 
 impl From<pragma_db::models::User> for UserProfile {
