@@ -56,15 +56,15 @@ impl SupervisedTask for StarknetIndexer {
             tokio::select! {
                 Some(output_event) = event_receiver.recv() => {
                     match output_event {
-                        OutputEvent::Event { header, event, tx_hash } => {
+                        OutputEvent::Event { event, event_metadata } => {
                             let (block_number, block_timestamp) =
-                            header.map_or_else(|| todo!(), |h| (h.block_number, h.timestamp));
+                            (event_metadata.block_number, event_metadata.timestamp);
 
                             let block_timestamp = DateTime::from_timestamp_secs(block_timestamp).unwrap_or_else(|| {
                                 panic!("[StarknetIndexer] ❌ Invalid timestamp for block {block_number}")
                             });
 
-                            let tx_hash = tx_hash.map(felt_to_hex_str).expect("[StarknetIndexer] ❌ Invalid transaction hash");
+                            let tx_hash = felt_to_hex_str(event_metadata.transaction_hash);
 
                             if let Err(e) = self.handle_event(block_number, block_timestamp, event, tx_hash).await {
                                 self.state.record_indexer_state_error(&self.vault_id, e.to_string()).await?;
