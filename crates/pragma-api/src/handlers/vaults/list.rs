@@ -42,13 +42,14 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
 
     let mut items = Vec::with_capacity(vaults.len());
     for vault in vaults {
-        let (tvl, average_redeem_delay, last_reported) = if is_alternative_vault(&vault.id) {
+        let (tvl, apr, average_redeem_delay, last_reported) = if is_alternative_vault(&vault.id) {
             let client =
                 VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
             match client.get_vault().await {
                 Ok(data) => {
                     let tvl = data.tvl.unwrap_or_else(|| "0".to_string());
-                    (tvl, data.average_redeem_delay, data.last_reported)
+                    let apr = data.apr.unwrap_or_else(|| "0".to_string());
+                    (tvl, apr, data.average_redeem_delay, data.last_reported)
                 }
                 Err(err) => {
                     tracing::warn!(
@@ -56,17 +57,17 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
                         error = %err,
                         "Failed to fetch alternative vault snapshot"
                     );
-                    ("0".to_string(), None, None)
+                    ("0".to_string(), "0".to_string(), None, None)
                 }
             }
         } else {
             let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
             if let Ok(p) = client.get_vault_stats().await {
-                (p.tvl, None, None)
+                (p.tvl, p.past_month_apr_pct.to_string(), None, None)
             } else {
                 let code: Option<HttpStatusCode> = None;
                 tracing::warn!(vault_id = %vault.id, status = ?code, "Failed to fetch vault stats");
-                ("0".to_string(), None, None)
+                ("0".to_string(), "0".to_string(), None, None)
             }
         };
 
@@ -80,6 +81,7 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
             chain: vault.chain,
             symbol: vault.symbol,
             tvl,
+            apr,
             status,
             average_redeem_delay,
             last_reported,
