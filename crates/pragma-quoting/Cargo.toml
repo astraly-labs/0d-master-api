@@ -1,8 +1,8 @@
 [package]
-name = "pragma-master"
+name = "pragma-quoting"
 version.workspace = true
 edition.workspace = true
-description = "Master API client for vault communication"
+description.workspace = true
 homepage.workspace = true
 repository.workspace = true
 readme.workspace = true
@@ -14,16 +14,18 @@ exclude.workspace = true
 workspace = true
 
 [dependencies]
-pragma-db.workspace = true
+pragma-rs.workspace = true
 pragma-common.workspace = true
 
 anyhow.workspace = true
-chrono.workspace = true
-reqwest.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-thiserror.workspace = true
+async-trait.workspace = true
+dashmap.workspace = true
+futures.workspace = true
+rust_decimal.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 utoipa.workspace = true
+reqwest.workspace = true
 moka.workspace = true

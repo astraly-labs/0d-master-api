@@ -3,21 +3,15 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use pragma_db::models::user_transaction::{TransactionStatus, TransactionType};
+use pragma_quoting::currencies::Currency;
 
 pub use pragma_db::types::{PerformanceMetric, Timeframe};
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum DisplayCurrency {
-    USD,
-    USDC,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UserProfile {
     pub address: String,
     pub chain: String,
-    pub display_currency: DisplayCurrency,
+    pub display_currency: Currency,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -89,6 +83,7 @@ pub struct PendingRedeemsResponse {
     pub as_of: DateTime<Utc>,
     pub pending_redeems: Vec<PendingRedeem>,
     pub total_pending: String,
+    pub average_redeem_delay: Option<i64>,
 }
 
 impl From<pragma_db::models::User> for UserProfile {
@@ -96,7 +91,7 @@ impl From<pragma_db::models::User> for UserProfile {
         Self {
             address: user.address,
             chain: user.chain,
-            display_currency: DisplayCurrency::USD,
+            display_currency: Currency::USD,
         }
     }
 }

@@ -7,7 +7,7 @@ use pragma_db::models::{
     IndexerState, UserKpi, UserKpiUpdate, UserPortfolioHistory, UserPosition, UserTransaction,
     Vault,
 };
-use pragma_master::VaultMasterAPIClient;
+use pragma_master::{VaultAlternativeAPIClient, VaultMasterAPIClient};
 
 use crate::{calculate_risk_metrics, calculate_user_pnl};
 
@@ -313,15 +313,37 @@ impl KpiService {
         Ok(())
     }
 
-    /// Fetch vault share price using `VaultMasterAPIClient`
-    async fn fetch_vault_share_price(vault: &Vault) -> anyhow::Result<Decimal> {
-        let client = VaultMasterAPIClient::new(&vault.api_endpoint)
-            .map_err(|e| anyhow::anyhow!("Failed to create vault client: {e}"))?;
+    /// Determine if a vault is an alternative vault (vaults 2-6)
+    fn is_alternative_vault(vault_id: &str) -> bool {
+        vault_id
+            .parse::<i32>()
+            .map(|id| (2..=6).contains(&id))
+            .unwrap_or(false)
+    }
 
-        let share_price_str = client
-            .get_vault_share_price()
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to fetch share price: {e}"))?;
+    /// Fetch vault share price using the appropriate client based on vault type
+    async fn fetch_vault_share_price(vault: &Vault) -> anyhow::Result<Decimal> {
+        let share_price_str = if Self::is_alternative_vault(&vault.id) {
+            // Use alternative client for vaults 2-6
+            let client =
+                VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)
+                    .map_err(|e| {
+                        anyhow::anyhow!("Failed to create alternative vault client: {e}")
+                    })?;
+
+            client.get_vault_share_price().await.map_err(|e| {
+                anyhow::anyhow!("Failed to fetch alternative vault share price: {e}")
+            })?
+        } else {
+            // Use master client for vault 1
+            let client = VaultMasterAPIClient::new(&vault.api_endpoint)
+                .map_err(|e| anyhow::anyhow!("Failed to create master vault client: {e}"))?;
+
+            client
+                .get_vault_share_price()
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to fetch master vault share price: {e}"))?
+        };
 
         share_price_str
             .parse::<Decimal>()

@@ -164,7 +164,7 @@
             "description": "Display currency",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/DisplayCurrency"
+              "$ref": "#/components/schemas/Currency"
             }
           }
         ],
@@ -1284,6 +1284,13 @@
           }
         }
       },
+      "Currency": {
+        "type": "string",
+        "enum": [
+          "usd",
+          "usdc"
+        ]
+      },
       "DepositConstraints": {
         "type": "object",
         "properties": {
@@ -1306,13 +1313,6 @@
             ]
           }
         }
-      },
-      "DisplayCurrency": {
-        "type": "string",
-        "enum": [
-          "usd",
-          "usdc"
-        ]
       },
       "GetStatsDTO": {
         "type": "object",
@@ -1583,6 +1583,13 @@
           "as_of": {
             "type": "string",
             "format": "date-time"
+          },
+          "average_redeem_delay": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
           },
           "pending_redeems": {
             "type": "array",
@@ -1869,7 +1876,7 @@
             "type": "string"
           },
           "display_currency": {
-            "$ref": "#/components/schemas/DisplayCurrency"
+            "$ref": "#/components/schemas/Currency"
           }
         }
       },
