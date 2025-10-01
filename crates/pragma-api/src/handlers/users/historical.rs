@@ -8,14 +8,12 @@ use serde::Deserialize;
 use crate::{
     AppState,
     dto::ApiResponse,
-    dto::{
-        DisplayCurrency, HistoricalDataPoint, HistoricalUserPerformance, PerformanceMetric,
-        Timeframe,
-    },
+    dto::{HistoricalDataPoint, HistoricalUserPerformance, PerformanceMetric, Timeframe},
     errors::ApiError,
-    helpers::validate_indexer_status,
+    helpers::{quote_to_currency, validate_indexer_status},
 };
 use pragma_db::models::UserKpi;
+use pragma_quoting::currencies::Currency;
 
 #[derive(Debug, Deserialize)]
 pub struct HistoricalQuery {
@@ -23,15 +21,15 @@ pub struct HistoricalQuery {
     #[serde(default = "default_timeframe")]
     pub timeframe: Timeframe,
     #[serde(default = "default_currency")]
-    pub currency: DisplayCurrency,
+    pub currency: Currency,
 }
 
 const fn default_timeframe() -> Timeframe {
     Timeframe::All
 }
 
-const fn default_currency() -> DisplayCurrency {
-    DisplayCurrency::USD
+const fn default_currency() -> Currency {
+    Currency::USD
 }
 
 #[utoipa::path(
@@ -43,7 +41,7 @@ const fn default_currency() -> DisplayCurrency {
         ("vault_id" = String, Path, description = "Vault identifier"),
         ("metric" = PerformanceMetric, Query, description = "User performance metric to return"),
         ("timeframe" = Option<Timeframe>, Query, description = "Time period for data"),
-        ("currency" = Option<DisplayCurrency>, Query, description = "Display currency")
+        ("currency" = Option<Currency>, Query, description = "Display currency")
     ),
     responses(
         (status = 200, description = "Historical User performance", body = HistoricalUserPerformance),
@@ -107,14 +105,15 @@ pub async fn get_historical_user_performance(
         ApiError::InternalServerError
     })?;
 
-    // Convert to API format
-    let points: Vec<HistoricalDataPoint> = historical_data
-        .into_iter()
-        .map(|(timestamp, value)| HistoricalDataPoint {
+    // Convert to API format with currency conversion
+    let mut points: Vec<HistoricalDataPoint> = Vec::new();
+    for (timestamp, value) in historical_data {
+        let converted_value = quote_to_currency(value, query.currency).await?;
+        points.push(HistoricalDataPoint {
             t: timestamp,
-            v: value.to_string(),
-        })
-        .collect();
+            v: converted_value.to_string(),
+        });
+    }
 
     let response = HistoricalUserPerformance {
         metric: query.metric,

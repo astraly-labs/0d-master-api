@@ -1,4 +1,6 @@
 use pragma_db::models::IndexerState;
+use pragma_quoting::currencies::{CURRENCIES_PRICES, Currency};
+use rust_decimal::Decimal;
 
 use crate::errors::ApiError;
 
@@ -59,4 +61,18 @@ pub async fn validate_indexer_status(
     }
 
     Ok(())
+}
+
+/// Quote an amount to a target currencys
+pub async fn quote_to_currency(
+    amount: Decimal,
+    target_currency: Currency,
+) -> Result<Decimal, ApiError> {
+    // Get the price of the target currency in USD
+    let price = CURRENCIES_PRICES.of(target_currency).await.map_err(|e| {
+        tracing::error!("Failed to fetch price for {:?}: {}", target_currency, e);
+        ApiError::InternalServerError
+    })?;
+
+    Ok(amount / price)
 }

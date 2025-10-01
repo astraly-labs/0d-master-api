@@ -1,12 +1,11 @@
 use anyhow::{Result as AnyResult, anyhow};
 use chrono::{DateTime, Utc};
 use moka::future::Cache;
-use once_cell::sync::Lazy;
 use pragma_db::types::Timeframe;
 use reqwest::Client;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
-use std::time::Duration;
+use std::{sync::LazyLock, time::Duration};
 
 use crate::{
     client::http_client,
@@ -48,13 +47,13 @@ pub struct VaultAlternativeAPIClient {
     contract_address: String,
 }
 
-static VAULT_CACHE: Lazy<Cache<String, Vec<AlternativeVaultDTO>>> = Lazy::new(|| {
+static VAULT_CACHE: LazyLock<Cache<String, Vec<AlternativeVaultDTO>>> = LazyLock::new(|| {
     Cache::builder()
         .time_to_live(Duration::from_secs(30))
         .build()
 });
 
-static HISTORY_CACHE: Lazy<Cache<String, Vec<AlternativeHistoryEntry>>> = Lazy::new(|| {
+static HISTORY_CACHE: LazyLock<Cache<String, Vec<AlternativeHistoryEntry>>> = LazyLock::new(|| {
     Cache::builder()
         .time_to_live(Duration::from_secs(30))
         .build()
@@ -129,7 +128,6 @@ impl VaultAlternativeAPIClient {
             "7d" => Timeframe::SevenDays,
             "30d" => Timeframe::ThirtyDays,
             "1y" => Timeframe::OneYear,
-            "all" => Timeframe::All,
             _ => Timeframe::All,
         };
 
@@ -162,9 +160,8 @@ impl VaultAlternativeAPIClient {
 
         let mut points = Vec::with_capacity(history.len());
         for entry in history {
-            let ts = match to_rfc3339(entry.timestamp) {
-                Some(ts) => ts,
-                None => continue,
+            let Some(ts) = to_rfc3339(entry.timestamp) else {
+                continue;
             };
 
             let value = match metric_lower.as_str() {
@@ -274,7 +271,7 @@ async fn fetch_all_vaults_uncached(
     http_client: Client,
     api_endpoint: String,
 ) -> AnyResult<Vec<AlternativeVaultDTO>> {
-    let url = format!("{}/vaults", api_endpoint);
+    let url = format!("{api_endpoint}/vaults");
     let response = http_client.get(url).send().await?;
 
     if !response.status().is_success() {
@@ -295,7 +292,7 @@ async fn fetch_history_uncached(
     timeframe: String,
 ) -> AnyResult<Vec<AlternativeHistoryEntry>> {
     let params = history_params(&timeframe);
-    let url = format!("{}/vaults/{}/history", api_endpoint, contract_address);
+    let url = format!("{api_endpoint}/vaults/{contract_address}/history");
 
     let response = http_client
         .get(url)

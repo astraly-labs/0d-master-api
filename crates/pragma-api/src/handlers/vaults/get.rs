@@ -55,7 +55,7 @@ pub async fn get_vault(
     // Fetch non-metadata (tvl & share_price) from the vault's API endpoint.
     let (vault_stats, share_price) = if is_alternative_vault(&vault.id) {
         let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
-        let stats = client.get_vault_stats().await.map_err(|e| {
+        let vault_stats = client.get_vault_stats().await.map_err(|e| {
             tracing::error!("Failed to fetch alternative vault stats: {}", e);
             ApiError::InternalServerError
         })?;
@@ -63,10 +63,10 @@ pub async fn get_vault(
             tracing::error!("Failed to fetch alternative vault share price: {}", e);
             ApiError::InternalServerError
         })?;
-        (stats, share_price)
+        (vault_stats, share_price)
     } else {
         let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
-        let stats = client.get_vault_stats().await.map_err(|e| {
+        let vault_stats = client.get_vault_stats().await.map_err(|e| {
             tracing::error!("Failed to fetch vault stats: {}", e);
             ApiError::InternalServerError
         })?;
@@ -74,7 +74,7 @@ pub async fn get_vault(
             tracing::error!("Failed to fetch vault share price: {}", e);
             ApiError::InternalServerError
         })?;
-        (stats, share_price)
+        (vault_stats, share_price)
     };
 
     // Build response DTO and embed live values.
