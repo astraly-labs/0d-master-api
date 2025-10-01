@@ -1,0 +1,38 @@
+[package]
+name = "zero-d-relayer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Relayer service for auto AUM reporting and redeem claims"
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+exclude.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+pragma-common.workspace = true
+pragma-db.workspace = true
+evian.workspace = true
+
+anyhow.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+deadpool-diesel.workspace = true
+futures.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+
+num-bigint = "0.4"
+diesel.workspace = true
+starknet.workspace = true
+starknet-crypto = "0.8"
