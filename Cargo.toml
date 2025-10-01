@@ -12,8 +12,10 @@ repository = "https://github.com/astraly-labs/0d-master-api"
 [workspace]
 members = [
     # Binaries
+    "bin/auto-redeem",
     "bin/pragma-bin",
     # Crates
+    "crates/0d-relayer",
     "crates/pragma-api",
     "crates/pragma-db",
     "crates/pragma-indexer",
@@ -72,6 +74,7 @@ pragma-db = { path = "crates/pragma-db", default-features = false }
 pragma-indexer = { path = "crates/pragma-indexer", default-features = false }
 pragma-kpi = { path = "crates/pragma-kpi", default-features = false }
 pragma-master = { path = "crates/pragma-master", default-features = false }
+zero-d-relayer = { path = "crates/0d-relayer", default-features = false }
 
 # Pragma crates
 pragma-common = { version = "0.4.1", features = [

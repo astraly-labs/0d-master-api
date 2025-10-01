@@ -1,0 +1,30 @@
+[package]
+name = "auto-redeem"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Background runner for the 0d relayer"
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+exclude.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+zero-d-relayer.workspace = true
+pragma-common.workspace = true
+pragma-db.workspace = true
+
+anyhow.workspace = true
+clap.workspace = true
+dotenvy.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+url.workspace = true
+starknet-crypto = "0.8"
+starknet.workspace = true
