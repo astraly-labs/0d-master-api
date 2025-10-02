@@ -55,7 +55,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ARG APP_NAME=pragma-bin
+ARG APP_NAME=zerod_bin
 ENV APP_NAME $APP_NAME
 
 # Create app directory

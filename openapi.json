@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "pragma-api",
+    "title": "zerod_api",
     "description": "0D Master API for vaults",
     "license": {
       "name": "MIT",
@@ -451,7 +451,7 @@
             "description": "Time period for APR series",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/Timeframe"
             },
             "example": "7d"
           }
@@ -501,7 +501,7 @@
             "description": "APR calculation basis",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/AprBasis"
             },
             "example": "nominal"
           }
@@ -588,7 +588,7 @@
             "description": "Aggregate by platform or asset",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/GroupBy"
             },
             "example": "platform"
           }
@@ -638,7 +638,7 @@
             "description": "Time period for composition series",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/Timeframe"
             },
             "example": "30d"
           },
@@ -735,7 +735,7 @@
             "description": "Time period for KPI calculation",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/Timeframe"
             },
             "example": "all"
           }
@@ -983,7 +983,7 @@
             "description": "Vault-level metric to return",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/Metric"
             },
             "example": "tvl"
           },
@@ -993,7 +993,7 @@
             "description": "Time period",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/Timeframe"
             },
             "example": "7d"
           },
@@ -1003,7 +1003,7 @@
             "description": "Currency for values",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/Currency"
             },
             "example": "USD"
           }
@@ -1082,7 +1082,7 @@
         "description": "Query parameters for APR series endpoint",
         "properties": {
           "timeframe": {
-            "type": "string"
+            "$ref": "#/components/schemas/Timeframe"
           }
         }
       },
@@ -1107,7 +1107,7 @@
         "description": "Query parameters for APR summary endpoint",
         "properties": {
           "apr_basis": {
-            "type": "string"
+            "$ref": "#/components/schemas/AprBasis"
           }
         }
       },
@@ -1209,7 +1209,7 @@
         "description": "Query parameters for composition endpoint",
         "properties": {
           "group_by": {
-            "type": "string"
+            "$ref": "#/components/schemas/GroupBy"
           }
         }
       },
@@ -1266,10 +1266,10 @@
         "description": "Query parameters for composition series endpoint",
         "properties": {
           "group_by": {
-            "type": "string"
+            "$ref": "#/components/schemas/GroupBy"
           },
           "timeframe": {
-            "type": "string"
+            "$ref": "#/components/schemas/Timeframe"
           }
         }
       },
@@ -1511,6 +1511,13 @@
           }
         }
       },
+      "Metric": {
+        "type": "string",
+        "enum": [
+          "tvl",
+          "pnl"
+        ]
+      },
       "NavLatestDTO": {
         "type": "object",
         "required": [
@@ -1687,7 +1694,7 @@
         "description": "Common query parameters for endpoints that accept timeframe",
         "properties": {
           "timeframe": {
-            "type": "string"
+            "$ref": "#/components/schemas/Timeframe"
           }
         }
       },
@@ -1729,13 +1736,13 @@
         ],
         "properties": {
           "currency": {
-            "type": "string"
+            "$ref": "#/components/schemas/Currency"
           },
           "metric": {
-            "type": "string"
+            "$ref": "#/components/schemas/Metric"
           },
           "timeframe": {
-            "type": "string"
+            "$ref": "#/components/schemas/Timeframe"
           }
         }
       },
@@ -2082,9 +2089,13 @@
           "chain",
           "symbol",
           "tvl",
+          "apr",
           "status"
         ],
         "properties": {
+          "apr": {
+            "type": "string"
+          },
           "average_redeem_delay": {
             "type": [
               "string",
@@ -2137,62 +2148,6 @@
           }
         }
       },
-      "VaultPortfolioDTO": {
-        "type": "object",
-        "description": "Vault portfolio snapshot as returned by an individual vault API\nExample corresponds to Carry Trade vault.",
-        "required": [
-          "age_days",
-          "last_30d_apr",
-          "num_depositors",
-          "profit_factor",
-          "tvl_in_usd",
-          "total_exposure_in_usd",
-          "total_pnl",
-          "free_collateral",
-          "balances"
-        ],
-        "properties": {
-          "age_days": {
-            "type": "string"
-          },
-          "balances": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              },
-              "propertyNames": {
-                "type": "string"
-              }
-            },
-            "propertyNames": {
-              "type": "string"
-            }
-          },
-          "free_collateral": {
-            "type": "string"
-          },
-          "last_30d_apr": {
-            "type": "string"
-          },
-          "num_depositors": {
-            "type": "string"
-          },
-          "profit_factor": {
-            "type": "string"
-          },
-          "total_exposure_in_usd": {
-            "type": "string"
-          },
-          "total_pnl": {
-            "type": "string"
-          },
-          "tvl_in_usd": {
-            "type": "string"
-          }
-        }
-      },
       "WithdrawConstraints": {
         "type": "object",
         "properties": {
@@ -2228,7 +2183,7 @@
   },
   "tags": [
     {
-      "name": "pragma-bin",
+      "name": "zerod_bin",
       "description": "0d, master api"
     },
     {

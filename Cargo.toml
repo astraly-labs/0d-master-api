@@ -12,14 +12,14 @@ repository = "https://github.com/astraly-labs/0d-master-api"
 [workspace]
 members = [
     # Binaries
-    "bin/pragma-bin",
+    "bin/0d-bin",
     # Crates
-    "crates/pragma-api",
-    "crates/pragma-db",
-    "crates/pragma-indexer",
-    "crates/pragma-kpi",
-    "crates/pragma-master",
-    "crates/pragma-quoting",
+    "crates/0d-api",
+    "crates/0d-db",
+    "crates/0d-indexer",
+    "crates/0d-kpi",
+    "crates/0d-master",
+    "crates/0d-quoting",
 ]
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -68,12 +68,12 @@ large_stack_arrays = "allow"
 [workspace.dependencies]
 
 # Local crates
-pragma-api = { path = "crates/pragma-api", default-features = false }
-pragma-db = { path = "crates/pragma-db", default-features = false }
-pragma-indexer = { path = "crates/pragma-indexer", default-features = false }
-pragma-kpi = { path = "crates/pragma-kpi", default-features = false }
-pragma-master = { path = "crates/pragma-master", default-features = false }
-pragma-quoting = { path = "crates/pragma-quoting", default-features = false }
+zerod_api = { path = "crates/0d-api", default-features = false }
+zerod_db = { path = "crates/0d-db", default-features = false }
+zerod_indexer = { path = "crates/0d-indexer", default-features = false }
+zerod_kpi = { path = "crates/0d-kpi", default-features = false }
+zerod_master = { path = "crates/0d-master", default-features = false }
+zerod_quoting = { path = "crates/0d-quoting", default-features = false }
 
 # Pragma crates
 pragma-common = { version = "0.4.1", features = [

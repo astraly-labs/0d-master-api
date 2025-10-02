@@ -18,12 +18,12 @@ Pragma Template is a template for creating a new service using axum and diesel. 
 The project is organized into a workspace with multiple crates:
 
 ```
-pragma-axum-diesel-template/
+0d-master-api/
 ├── bin/                     # Binary crates
-│   └── pragma-bin/          # Main executable
+│   └── 0d-bin/          # Main executable
 ├── crates/                  # Library crates
-│   ├── pragma-api/          # API logic and routes
-│   └── pragma-db/           # Database models and interactions
+│   ├── 0d-api/          # API logic and routes
+│   └── 0d-db/           # Database models and interactions
 |       └── migrations/      # Database migrations
 └── src/                     # Workspace shared code
 ```
@@ -42,8 +42,8 @@ This structure allows for clear separation of concerns and easier maintenance.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/pragma-axum-diesel-template.git
-   cd pragma-axum-diesel-template
+   git clone https://github.com/yourusername/0d-master-api.git
+   cd 0d-master-api
    ```
 
 2. Copy the example environment file:
@@ -79,17 +79,17 @@ cargo build
 cargo nextest run
 
 # Run with cargo
-cargo run --bin pragma-bin
+cargo run --bin 0d-bin
 ```
 
 ### Running in Docker
 
 ```bash
 # Build the Docker image
-docker build -t pragma-bin .
+docker build -t 0d-bin .
 
 # Run the container
-docker run -p 3000:3000 --env-file .env pragma-bin
+docker run -p 3000:3000 --env-file .env 0d-bin
 ```
 
 ## ⚙️ Configuration
@@ -133,7 +133,7 @@ diesel migration generate name_of_migration
 cargo test
 
 # Run specific tests
-cargo test -p pragma-api
+cargo test -p 0d-api
 
 # Format and lint code
 make format
@@ -144,12 +144,12 @@ make format
 To complete this template you can:
 
 1. **Models and Business Logic**
-   - Implement models in `crates/pragma-db/src/models/`
-   - Add business logic in `crates/pragma-api/src/handlers/`
+   - Implement models in `crates/0d-db/src/models/`
+   - Add business logic in `crates/0d-api/src/handlers/`
    - Create database migrations
 
 2. **API Endpoints**
-   - Implement endpoints in `crates/pragma-api/src/handlers/`
+   - Implement endpoints in `crates/0d-api/src/handlers/`
 
 3. **Testing and Documentation**
    - Write comprehensive tests for all endpoints
