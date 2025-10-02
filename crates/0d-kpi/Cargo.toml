@@ -1,0 +1,32 @@
+[package]
+name = "zerod_kpi"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
+rust-version.workspace = true
+exclude.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+zerod_db.workspace = true
+zerod_master.workspace = true
+pragma-common.workspace = true
+
+deadpool-diesel.workspace = true
+diesel.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

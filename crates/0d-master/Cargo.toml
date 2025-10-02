@@ -1,0 +1,29 @@
+[package]
+name = "zerod_master"
+version.workspace = true
+edition.workspace = true
+description = "Master API client for vault communication"
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
+rust-version.workspace = true
+exclude.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+zerod_db.workspace = true
+pragma-common.workspace = true
+
+anyhow.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+utoipa.workspace = true
+moka.workspace = true

@@ -2952,56 +2952,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pragma-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum 0.8.4",
- "axum-extra",
- "axum-tracing-opentelemetry",
- "bigdecimal",
- "chrono",
- "deadpool-diesel",
- "diesel",
- "dotenvy",
- "pragma-common 0.4.1",
- "pragma-db",
- "pragma-kpi",
- "pragma-master",
- "pragma-quoting",
- "reqwest 0.12.23",
- "rust_decimal",
- "serde",
- "serde_json",
- "thiserror 2.0.16",
- "tokio",
- "tower-http 0.5.2",
- "tower_governor",
- "tracing",
- "utoipa",
- "utoipa-swagger-ui",
- "utoipauto",
-]
-
-[[package]]
-name = "pragma-bin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "dotenvy",
- "pragma-api",
- "pragma-common 0.4.1",
- "pragma-db",
- "pragma-indexer",
- "pragma-kpi",
- "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "pragma-common"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3049,107 +2999,6 @@ dependencies = [
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
- "utoipa",
-]
-
-[[package]]
-name = "pragma-db"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bigdecimal",
- "chrono",
- "clap",
- "deadpool-diesel",
- "diesel",
- "diesel_migrations",
- "dotenvy",
- "pragma-common 0.4.1",
- "rust_decimal",
- "serde",
- "serde_json",
- "thiserror 2.0.16",
- "tokio",
- "tracing",
- "utoipa",
-]
-
-[[package]]
-name = "pragma-indexer"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "deadpool-diesel",
- "diesel",
- "evian",
- "pragma-common 0.4.1",
- "pragma-db",
- "rust_decimal",
- "serde_json",
- "starknet 0.17.0",
- "task-supervisor",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "pragma-kpi"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "deadpool-diesel",
- "diesel",
- "pragma-common 0.4.1",
- "pragma-db",
- "pragma-master",
- "reqwest 0.12.23",
- "rust_decimal",
- "serde",
- "serde_json",
- "thiserror 2.0.16",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "pragma-master"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "moka",
- "pragma-common 0.4.1",
- "pragma-db",
- "reqwest 0.12.23",
- "serde",
- "serde_json",
- "thiserror 2.0.16",
- "tokio",
- "tracing",
- "utoipa",
-]
-
-[[package]]
-name = "pragma-quoting"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "dashmap",
- "futures",
- "moka",
- "pragma-common 0.4.1",
- "pragma-rs",
- "reqwest 0.12.23",
- "rust_decimal",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
  "utoipa",
 ]
 
@@ -6354,6 +6203,158 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.106",
+]
+
+[[package]]
+name = "zerod_api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum 0.8.4",
+ "axum-extra",
+ "axum-tracing-opentelemetry",
+ "bigdecimal",
+ "chrono",
+ "deadpool-diesel",
+ "diesel",
+ "dotenvy",
+ "futures",
+ "pragma-common 0.4.1",
+ "reqwest 0.12.23",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.16",
+ "tokio",
+ "tower-http 0.5.2",
+ "tower_governor",
+ "tracing",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "utoipauto",
+ "zerod_db",
+ "zerod_kpi",
+ "zerod_master",
+ "zerod_quoting",
+]
+
+[[package]]
+name = "zerod_bin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "dotenvy",
+ "pragma-common 0.4.1",
+ "tokio",
+ "tracing",
+ "url",
+ "zerod_api",
+ "zerod_db",
+ "zerod_indexer",
+ "zerod_kpi",
+]
+
+[[package]]
+name = "zerod_db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bigdecimal",
+ "chrono",
+ "clap",
+ "deadpool-diesel",
+ "diesel",
+ "diesel_migrations",
+ "dotenvy",
+ "pragma-common 0.4.1",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.16",
+ "tokio",
+ "tracing",
+ "utoipa",
+]
+
+[[package]]
+name = "zerod_indexer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "deadpool-diesel",
+ "diesel",
+ "evian",
+ "pragma-common 0.4.1",
+ "rust_decimal",
+ "serde_json",
+ "starknet 0.17.0",
+ "task-supervisor",
+ "tokio",
+ "tracing",
+ "zerod_db",
+]
+
+[[package]]
+name = "zerod_kpi"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "deadpool-diesel",
+ "diesel",
+ "pragma-common 0.4.1",
+ "reqwest 0.12.23",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.16",
+ "tokio",
+ "tracing",
+ "zerod_db",
+ "zerod_master",
+]
+
+[[package]]
+name = "zerod_master"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "moka",
+ "pragma-common 0.4.1",
+ "reqwest 0.12.23",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.16",
+ "tokio",
+ "tracing",
+ "utoipa",
+ "zerod_db",
+]
+
+[[package]]
+name = "zerod_quoting"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "dashmap",
+ "futures",
+ "moka",
+ "pragma-common 0.4.1",
+ "pragma-rs",
+ "reqwest 0.12.23",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "utoipa",
 ]
 
 [[package]]
