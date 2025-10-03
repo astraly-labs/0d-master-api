@@ -1,4 +1,6 @@
-use super::mapping::*;
+mod types;
+
+use self::types::{apr_basis_from_str, group_by_from_str, timeframe_from_str};
 use crate::{
     dto::{
         AprSeriesDTO, AprSummaryDTO, CapsDTO, CompositionDTO, CompositionSeriesDTO, GetStatsDTO,
@@ -25,25 +27,25 @@ impl JaffarClient {
 impl VaultMasterClient for JaffarClient {
     async fn get_vault_stats(&self) -> Result<GetStatsDTO, MasterApiError> {
         let response = self.client.get_master_stats().await?;
-        Ok(convert_stats_jaffar(response.into_inner()))
+        Ok(response.into_inner().into())
     }
 
     async fn get_vault_apr_summary(&self, apr_basis: &str) -> Result<AprSummaryDTO, MasterApiError> {
-        let basis = apr_basis_to_jaffar(apr_basis);
+        let basis = apr_basis_from_str(apr_basis);
         let response = self.client.get_master_apr_summary(basis).await?;
-        Ok(convert_apr_summary_jaffar(response.into_inner()))
+        Ok(response.into_inner().into())
     }
 
     async fn get_vault_apr_series(&self, timeframe: &str) -> Result<AprSeriesDTO, MasterApiError> {
-        let tf = timeframe_to_jaffar(timeframe);
+        let tf = timeframe_from_str(timeframe);
         let response = self.client.get_master_apr_series(tf).await?;
-        Ok(convert_apr_series_jaffar(response.into_inner()))
+        Ok(response.into_inner().into())
     }
 
     async fn get_vault_composition(&self, group_by: &str) -> Result<CompositionDTO, MasterApiError> {
-        let group_by = group_by_to_jaffar(group_by);
-        let composition = self.client.get_master_composition(group_by).await?.into_inner();
-        Ok(convert_composition_jaffar(composition))
+        let group_by = group_by_from_str(group_by);
+        let response = self.client.get_master_composition(group_by).await?;
+        Ok(response.into_inner().into())
     }
 
     async fn get_vault_composition_series(
@@ -59,7 +61,7 @@ impl VaultMasterClient for JaffarClient {
 
     async fn get_vault_nav_latest(&self) -> Result<NavLatestDTO, MasterApiError> {
         let response = self.client.get_master_nav_latest().await?;
-        Ok(convert_nav_latest_jaffar(response.into_inner()))
+        Ok(response.into_inner().into())
     }
 
     async fn get_vault_caps(&self) -> Result<CapsDTO, MasterApiError> {
@@ -70,7 +72,7 @@ impl VaultMasterClient for JaffarClient {
     }
 
     async fn get_vault_kpis(&self, timeframe: &str) -> Result<KpisDTO, MasterApiError> {
-        let tf = timeframe_to_jaffar(timeframe);
+        let tf = timeframe_from_str(timeframe);
         let response = self.client.get_master_kpis(tf).await?;
         let inner = response.into_inner();
 
@@ -88,7 +90,7 @@ impl VaultMasterClient for JaffarClient {
         timeframe: &str,
         currency: &str,
     ) -> Result<TimeseriesResponseDTO, MasterApiError> {
-        let tf = timeframe_to_jaffar(timeframe);
+        let tf = timeframe_from_str(timeframe);
         let metric_enum = match metric.to_lowercase().as_str() {
             "tvl" => jaffar_sdk::types::Metric::Tvl,
             "pnl" => jaffar_sdk::types::Metric::Pnl,
@@ -105,7 +107,7 @@ impl VaultMasterClient for JaffarClient {
             .get_master_timeseries(Some(currency), metric_enum, tf)
             .await?;
 
-        Ok(convert_timeseries_jaffar(response.into_inner()))
+        Ok(response.into_inner().into())
     }
 
     async fn get_vault_liquidity(&self) -> Result<LiquidityDTO, MasterApiError> {

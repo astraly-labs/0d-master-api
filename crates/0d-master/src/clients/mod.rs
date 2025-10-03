@@ -1,4 +1,3 @@
-mod jaffar;
-mod mapping;
+pub mod jaffar;
 
 pub use jaffar::JaffarClient;
