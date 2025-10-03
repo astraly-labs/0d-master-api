@@ -2322,6 +2322,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
+name = "jaffar-sdk"
+version = "0.1.0"
+source = "sparse+https://registry.devnet.pragma.build/api/v1/crates/"
+checksum = "f865b53f6700cb6a645eb05a5c7f94d6d2ad5cdd073790c4195473dc429cf7e3"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "progenitor-client",
+ "reqwest 0.12.23",
+ "serde",
+ "serde_urlencoded",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.80"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3081,6 +3095,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89ae43fd86e4158d6db51ad8e2b80f313af9cc74f5c0e03ccb87de09998732de"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "progenitor-client"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "920f044db9ec07a3339175729794d3701e11d338dcf8cfd946df838102307780"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "percent-encoding",
+ "reqwest 0.12.23",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
 ]
 
 [[package]]
@@ -5787,7 +5816,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -6324,7 +6353,9 @@ name = "zerod_master"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
+ "jaffar-sdk",
  "moka",
  "pragma-common 0.4.1",
  "reqwest 0.12.23",
