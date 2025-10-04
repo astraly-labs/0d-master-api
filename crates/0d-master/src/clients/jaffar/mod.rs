@@ -30,7 +30,10 @@ impl VaultMasterClient for JaffarClient {
         Ok(response.into_inner().into())
     }
 
-    async fn get_vault_apr_summary(&self, apr_basis: &str) -> Result<AprSummaryDTO, MasterApiError> {
+    async fn get_vault_apr_summary(
+        &self,
+        apr_basis: &str,
+    ) -> Result<AprSummaryDTO, MasterApiError> {
         let basis = apr_basis_from_str(apr_basis);
         let response = self.client.get_master_apr_summary(basis).await?;
         Ok(response.into_inner().into())
@@ -42,7 +45,10 @@ impl VaultMasterClient for JaffarClient {
         Ok(response.into_inner().into())
     }
 
-    async fn get_vault_composition(&self, group_by: &str) -> Result<CompositionDTO, MasterApiError> {
+    async fn get_vault_composition(
+        &self,
+        group_by: &str,
+    ) -> Result<CompositionDTO, MasterApiError> {
         let group_by = group_by_from_str(group_by);
         let response = self.client.get_master_composition(group_by).await?;
         Ok(response.into_inner().into())
@@ -98,7 +104,7 @@ impl VaultMasterClient for JaffarClient {
                 return Err(MasterApiError::JaffarSdkError(format!(
                     "Invalid metric: {}",
                     metric
-                )))
+                )));
             }
         };
 

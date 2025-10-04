@@ -5,7 +5,7 @@ use axum::{
 };
 
 use zerod_db::{ZerodPool, models::Vault};
-use zerod_master::{CapsDTO, NavLatestDTO, VaultAlternativeAPIClient, VaultMasterAPIClient};
+use zerod_master::{CapsDTO, JaffarClient, NavLatestDTO, VaultMasterClient, VesuClient};
 
 use crate::{
     AppState,
@@ -41,7 +41,7 @@ pub async fn get_vault_caps(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Call the vault's caps endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let caps = client.get_vault_caps().await.map_err(|e| {
         tracing::error!("Failed to fetch vault caps: {}", e);
         ApiError::InternalServerError
@@ -78,13 +78,13 @@ pub async fn get_vault_nav_latest(
 
     // Call the vault's NAV latest endpoint via helper
     let nav_latest = if is_alternative_vault(&vault.id) {
-        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
         client.get_vault_nav_latest().await.map_err(|e| {
             tracing::error!("Failed to fetch alternative vault NAV latest: {}", e);
             ApiError::InternalServerError
         })?
     } else {
-        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        let client = JaffarClient::new(&vault.api_endpoint);
         client.get_vault_nav_latest().await.map_err(|e| {
             tracing::error!("Failed to fetch vault NAV latest: {}", e);
             ApiError::InternalServerError
@@ -121,7 +121,7 @@ pub async fn get_vault_info(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Call the vault's info endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let vault_info = client.get_vault_info().await.map_err(|e| {
         tracing::error!("Failed to fetch vault info: {}", e);
         ApiError::InternalServerError

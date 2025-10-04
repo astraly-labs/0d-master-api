@@ -8,7 +8,7 @@ use crate::{
     helpers::{is_alternative_vault, map_status},
 };
 use zerod_db::{ZerodPool, models::Vault};
-use zerod_master::{VaultAlternativeAPIClient, VaultMasterAPIClient};
+use zerod_master::{JaffarClient, VaultMasterClient, VesuClient};
 
 #[utoipa::path(
     get,
@@ -30,18 +30,16 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
         let vault = vault.clone();
         async move {
             let (tvl, apr, average_redeem_delay, last_reported) = if is_alternative_vault(&vault.id) {
-                match VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address) {
-                    Ok(client) => match client.get_vault().await {
-                        Ok(data) => {
-                            let tvl = data.tvl.unwrap_or_else(|| "0".to_string());
-                            let apr = data.apr.unwrap_or_else(|| "0".to_string());
-                            (tvl, apr, data.average_redeem_delay, data.last_reported)
+                match VesuClient::new(&vault.api_endpoint, &vault.contract_address) {
+                    Ok(client) => match client.get_vault_stats().await {
+                        Ok(stats) => {
+                            (stats.tvl, stats.past_month_apr_pct.to_string(), None, None)
                         }
                         Err(err) => {
                             tracing::warn!(
                                 vault_id = %vault.id,
                                 error = %err,
-                                "Failed to fetch alternative vault snapshot"
+                                "Failed to fetch alternative vault stats"
                             );
                             ("0".to_string(), "0".to_string(), None, None)
                         }
@@ -56,16 +54,11 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
                     }
                 }
             } else {
-                match VaultMasterAPIClient::new(&vault.api_endpoint) {
-                    Ok(client) => match client.get_vault_stats().await {
-                        Ok(p) => (p.tvl, p.past_month_apr_pct.to_string(), None, None),
-                        Err(err) => {
-                            tracing::warn!(vault_id = %vault.id, error = %err, "Failed to fetch vault stats");
-                            ("0".to_string(), "0".to_string(), None, None)
-                        }
-                    },
+                let client = JaffarClient::new(&vault.api_endpoint);
+                match client.get_vault_stats().await {
+                    Ok(p) => (p.tvl, p.past_month_apr_pct.to_string(), None, None),
                     Err(err) => {
-                        tracing::warn!(vault_id = %vault.id, error = %err, "Failed to create vault client");
+                        tracing::warn!(vault_id = %vault.id, error = %err, "Failed to fetch vault stats");
                         ("0".to_string(), "0".to_string(), None, None)
                     }
                 }

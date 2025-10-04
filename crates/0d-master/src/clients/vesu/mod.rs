@@ -15,8 +15,8 @@ use std::{sync::LazyLock, time::Duration};
 use vesu_sdk::ClientInfo;
 
 use types::{
-    apr_basis_from_str, history_params, timeframe_from_str, HistoryWithMetric,
-    HistoryWithTimeframe, NavHistory, VaultWithBasis,
+    HistoryWithMetric, HistoryWithTimeframe, NavHistory, VaultWithBasis, apr_basis_from_str,
+    history_params, timeframe_from_str,
 };
 
 pub struct VesuClient {
@@ -24,12 +24,13 @@ pub struct VesuClient {
     contract_address: String,
 }
 
-static VAULT_CACHE: LazyLock<Cache<String, Vec<vesu_sdk::types::VaultsControllerGetVaultsResponseItem>>> =
-    LazyLock::new(|| {
-        Cache::builder()
-            .time_to_live(Duration::from_secs(30))
-            .build()
-    });
+static VAULT_CACHE: LazyLock<
+    Cache<String, Vec<vesu_sdk::types::VaultsControllerGetVaultsResponseItem>>,
+> = LazyLock::new(|| {
+    Cache::builder()
+        .time_to_live(Duration::from_secs(30))
+        .build()
+});
 
 static HISTORY_CACHE: LazyLock<
     Cache<String, Vec<vesu_sdk::types::VaultsControllerGetVaultHistoryResponseItem>>,

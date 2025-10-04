@@ -6,7 +6,7 @@ use axum::{
 
 use zerod_db::{ZerodPool, models::Vault};
 use zerod_master::{
-    LiquidityDTO, LiquiditySimulateResponseDTO, SlippageCurveDTO, VaultMasterAPIClient,
+    JaffarClient, LiquidityDTO, LiquiditySimulateResponseDTO, SlippageCurveDTO, VaultMasterClient,
 };
 
 use crate::{
@@ -42,7 +42,7 @@ pub async fn get_vault_liquidity(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Call the vault's liquidity endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let liquidity = client.get_vault_liquidity().await.map_err(|e| {
         tracing::error!("Failed to fetch vault liquidity: {}", e);
         ApiError::InternalServerError
@@ -78,7 +78,7 @@ pub async fn get_vault_slippage_curve(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Call the vault's slippage curve endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let curve = client.get_vault_slippage_curve().await.map_err(|e| {
         tracing::error!("Failed to fetch vault slippage curve: {}", e);
         ApiError::InternalServerError
@@ -124,7 +124,7 @@ pub async fn simulate_vault_liquidity(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Call the vault's liquidity simulation endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let simulation = client
         .simulate_liquidity(&request.amount)
         .await

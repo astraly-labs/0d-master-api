@@ -11,11 +11,13 @@ use crate::{
 pub trait VaultMasterClient: Send + Sync {
     async fn get_vault_stats(&self) -> Result<GetStatsDTO, MasterApiError>;
 
-    async fn get_vault_apr_summary(&self, apr_basis: &str) -> Result<AprSummaryDTO, MasterApiError>;
+    async fn get_vault_apr_summary(&self, apr_basis: &str)
+    -> Result<AprSummaryDTO, MasterApiError>;
 
     async fn get_vault_apr_series(&self, timeframe: &str) -> Result<AprSeriesDTO, MasterApiError>;
 
-    async fn get_vault_composition(&self, group_by: &str) -> Result<CompositionDTO, MasterApiError>;
+    async fn get_vault_composition(&self, group_by: &str)
+    -> Result<CompositionDTO, MasterApiError>;
 
     async fn get_vault_composition_series(
         &self,

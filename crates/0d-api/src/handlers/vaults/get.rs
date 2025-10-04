@@ -11,7 +11,7 @@ use crate::{
     errors::{ApiError, DatabaseErrorExt},
 };
 use zerod_db::{ZerodPool, models::Vault};
-use zerod_master::{VaultAlternativeAPIClient, VaultMasterAPIClient};
+use zerod_master::{JaffarClient, VaultMasterClient, VesuClient};
 
 #[utoipa::path(
     get,
@@ -41,7 +41,7 @@ pub async fn get_vault(
 
     // Fetch non-metadata (tvl & share_price) from the vault's API endpoint.
     let (vault_stats, share_price) = if is_alternative_vault(&vault.id) {
-        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
         let vault_stats = client.get_vault_stats().await.map_err(|e| {
             tracing::error!("Failed to fetch alternative vault stats: {e}");
             ApiError::InternalServerError
@@ -52,7 +52,7 @@ pub async fn get_vault(
         })?;
         (vault_stats, share_price)
     } else {
-        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        let client = JaffarClient::new(&vault.api_endpoint);
         let vault_stats = client.get_vault_stats().await.map_err(|e| {
             tracing::error!("Failed to fetch vault stats: {e}");
             ApiError::InternalServerError

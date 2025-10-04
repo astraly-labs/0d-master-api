@@ -5,7 +5,7 @@ use axum::{
 };
 
 use zerod_db::{ZerodPool, models::Vault};
-use zerod_master::{GetStatsDTO, VaultAlternativeAPIClient, VaultMasterAPIClient};
+use zerod_master::{GetStatsDTO, JaffarClient, VaultMasterClient, VesuClient};
 
 use crate::{
     AppState,
@@ -42,13 +42,13 @@ pub async fn get_vault_stats(
 
     // Call the vault's portfolio/stats endpoint via helper
     let vault_stats = if is_alternative_vault(&vault.id) {
-        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
         client.get_vault_stats().await.map_err(|e| {
             tracing::error!("Failed to fetch alternative vault stats: {}", e);
             ApiError::InternalServerError
         })?
     } else {
-        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        let client = JaffarClient::new(&vault.api_endpoint);
         client.get_vault_stats().await.map_err(|e| {
             tracing::error!("Failed to fetch vault stats: {}", e);
             ApiError::InternalServerError

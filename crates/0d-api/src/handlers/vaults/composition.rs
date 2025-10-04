@@ -9,7 +9,7 @@ use zerod_db::{
     models::Vault,
     types::{GroupBy, Timeframe},
 };
-use zerod_master::{CompositionDTO, CompositionSeriesDTO, VaultMasterAPIClient};
+use zerod_master::{CompositionDTO, CompositionSeriesDTO, JaffarClient, VaultMasterClient};
 
 use crate::{
     AppState,
@@ -47,7 +47,7 @@ pub async fn get_vault_composition(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Call the vault's composition endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let composition = client
         .get_vault_composition(params.group_by.as_str())
         .await
@@ -90,7 +90,7 @@ pub async fn get_vault_composition_series(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Call the vault's composition series endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let composition_series = client
         .get_vault_composition_series(params.timeframe.as_str(), params.group_by.as_str())
         .await

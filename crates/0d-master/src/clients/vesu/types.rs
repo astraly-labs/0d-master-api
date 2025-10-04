@@ -1,6 +1,6 @@
 use crate::dto::{
-    AprBasis, AprPoint, AprSeriesDTO, AprSummaryDTO, GetStatsDTO, NavLatestDTO,
-    TimeseriesPoint, TimeseriesResponseDTO,
+    AprBasis, AprPoint, AprSeriesDTO, AprSummaryDTO, GetStatsDTO, NavLatestDTO, TimeseriesPoint,
+    TimeseriesResponseDTO,
 };
 use chrono::{DateTime, Utc};
 use zerod_db::types::Timeframe;
@@ -105,7 +105,11 @@ pub(super) struct HistoryWithTimeframe {
 
 impl From<HistoryWithTimeframe> for AprSeriesDTO {
     fn from(hwt: HistoryWithTimeframe) -> Self {
-        let points = hwt.history.iter().filter_map(try_apr_point_from_entry).collect();
+        let points = hwt
+            .history
+            .iter()
+            .filter_map(try_apr_point_from_entry)
+            .collect();
 
         AprSeriesDTO {
             timeframe: hwt.timeframe,
@@ -183,7 +187,10 @@ impl From<HistoryWithMetric> for TimeseriesResponseDTO {
         let metric_lower = hwm.metric.to_ascii_lowercase();
 
         let points = if metric_lower == "tvl" {
-            hwm.history.iter().filter_map(try_timeseries_point_from_entry).collect()
+            hwm.history
+                .iter()
+                .filter_map(try_timeseries_point_from_entry)
+                .collect()
         } else {
             Vec::new() // pnl or other metrics not supported
         };
