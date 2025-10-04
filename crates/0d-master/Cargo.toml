@@ -29,3 +29,4 @@ tracing.workspace = true
 utoipa.workspace = true
 moka.workspace = true
 jaffar-sdk.workspace = true
+vesu-sdk.workspace = true

@@ -7,7 +7,7 @@ pub mod traits;
 
 pub use alternative_client::VaultAlternativeAPIClient;
 pub use client::VaultMasterAPIClient;
-pub use clients::JaffarClient;
+pub use clients::{JaffarClient, VesuClient};
 pub use error::MasterApiError;
 pub use traits::VaultMasterClient;
 
