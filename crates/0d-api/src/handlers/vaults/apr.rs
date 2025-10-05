@@ -9,7 +9,7 @@ use zerod_db::{
     models::Vault,
     types::{AprBasis, Timeframe},
 };
-use zerod_master::{AprSeriesDTO, AprSummaryDTO, VaultAlternativeAPIClient, VaultMasterAPIClient};
+use zerod_master::{AprSeriesDTO, AprSummaryDTO, JaffarClient, VaultMasterClient, VesuClient};
 
 use crate::{
     AppState,
@@ -49,7 +49,7 @@ pub async fn get_vault_apr_summary(
 
     // Call the vault's APR summary endpoint via helper
     let apr_summary = if is_alternative_vault(&vault.id) {
-        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
         client
             .get_vault_apr_summary(params.apr_basis.as_str())
             .await
@@ -58,7 +58,7 @@ pub async fn get_vault_apr_summary(
                 ApiError::InternalServerError
             })?
     } else {
-        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        let client = JaffarClient::new(&vault.api_endpoint);
         client
             .get_vault_apr_summary(params.apr_basis.as_str())
             .await
@@ -102,7 +102,7 @@ pub async fn get_vault_apr_series(
 
     // Call the vault's APR series endpoint via helper
     let apr_series = if is_alternative_vault(&vault.id) {
-        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)?;
+        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
         client
             .get_vault_apr_series(params.timeframe.as_str())
             .await
@@ -111,7 +111,7 @@ pub async fn get_vault_apr_series(
                 ApiError::InternalServerError
             })?
     } else {
-        let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+        let client = JaffarClient::new(&vault.api_endpoint);
         client
             .get_vault_apr_series(params.timeframe.as_str())
             .await

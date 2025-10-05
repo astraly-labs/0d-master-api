@@ -13,4 +13,19 @@ pub enum MasterApiError {
 
     #[error("Anyhow error: {0}")]
     AnyhowError(#[from] anyhow::Error),
+
+    #[error("Jaffar SDK error: {0}")]
+    JaffarSdkError(String),
+
+    #[error("Vesu SDK error: {0}")]
+    VesuSdkError(String),
+}
+
+impl<T> From<jaffar_sdk::Error<T>> for MasterApiError
+where
+    T: std::fmt::Debug,
+{
+    fn from(err: jaffar_sdk::Error<T>) -> Self {
+        MasterApiError::JaffarSdkError(format!("{:?}", err))
+    }
 }

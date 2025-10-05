@@ -5,7 +5,7 @@ use axum::{
 };
 
 use zerod_db::{ZerodPool, models::Vault, types::Timeframe};
-use zerod_master::{KpisDTO, VaultMasterAPIClient};
+use zerod_master::{JaffarClient, KpisDTO, VaultMasterClient};
 
 use crate::{
     AppState,
@@ -45,7 +45,7 @@ pub async fn get_vault_kpis(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Call the vault's KPIs endpoint via helper
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let kpis = client
         .get_vault_kpis(params.timeframe.as_str())
         .await

@@ -18,6 +18,7 @@ zerod_db.workspace = true
 pragma-common.workspace = true
 
 anyhow.workspace = true
+async-trait.workspace = true
 chrono.workspace = true
 reqwest.workspace = true
 serde.workspace = true
@@ -27,3 +28,5 @@ tokio.workspace = true
 tracing.workspace = true
 utoipa.workspace = true
 moka.workspace = true
+jaffar-sdk.workspace = true
+vesu-sdk.workspace = true

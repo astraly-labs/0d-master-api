@@ -8,7 +8,7 @@ use zerod_db::models::{
     IndexerState, UserKpi, UserKpiUpdate, UserPortfolioHistory, UserPosition, UserTransaction,
     Vault,
 };
-use zerod_master::{VaultAlternativeAPIClient, VaultMasterAPIClient};
+use zerod_master::{JaffarClient, VaultMasterClient, VesuClient};
 
 use crate::{calculate_risk_metrics, calculate_user_pnl};
 
@@ -333,25 +333,13 @@ impl KpiService {
     /// Fetch vault share price using the appropriate client based on vault type
     async fn fetch_vault_share_price(vault: &Vault) -> anyhow::Result<Decimal> {
         let share_price_str = if Self::is_alternative_vault(&vault.id) {
-            // Use alternative client for vaults 2-6
-            let client =
-                VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)
-                    .map_err(|e| {
-                        anyhow::anyhow!("Failed to create alternative vault client: {e}")
-                    })?;
-
-            client.get_vault_share_price().await.map_err(|e| {
-                anyhow::anyhow!("Failed to fetch alternative vault share price: {e}")
-            })?
+            // Use Vesu client for vaults 2-6
+            let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
+            client.get_vault_share_price().await?
         } else {
-            // Use master client for vault 1
-            let client = VaultMasterAPIClient::new(&vault.api_endpoint)
-                .map_err(|e| anyhow::anyhow!("Failed to create master vault client: {e}"))?;
-
-            client
-                .get_vault_share_price()
-                .await
-                .map_err(|e| anyhow::anyhow!("Failed to fetch master vault share price: {e}"))?
+            // Use Jaffar client for vault 1
+            let client = JaffarClient::new(&vault.api_endpoint);
+            client.get_vault_share_price().await?
         };
 
         share_price_str

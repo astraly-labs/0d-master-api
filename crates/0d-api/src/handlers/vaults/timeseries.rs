@@ -9,7 +9,7 @@ use zerod_db::{
     models::Vault,
     types::{Currency, Metric, Timeframe},
 };
-use zerod_master::{TimeseriesResponseDTO, VaultAlternativeAPIClient, VaultMasterAPIClient};
+use zerod_master::{JaffarClient, TimeseriesResponseDTO, VaultMasterClient, VesuClient};
 
 use crate::{
     AppState,
@@ -51,15 +51,15 @@ pub async fn get_vault_timeseries(
 
     // Call the vault's timeseries endpoint via helper
     let timeseries = if is_alternative_vault(&vault.id) {
-        let client = VaultAlternativeAPIClient::new(&vault.api_endpoint, &vault.contract_address)
-            .map_err(|e| {
-            tracing::error!(
-                "Failed to create alternative vault API client for vault {}: {}",
-                vault_id,
-                e
-            );
-            ApiError::InternalServerError
-        })?;
+        let client =
+            VesuClient::new(&vault.api_endpoint, &vault.contract_address).map_err(|e| {
+                tracing::error!(
+                    "Failed to create alternative vault API client for vault {}: {}",
+                    vault_id,
+                    e
+                );
+                ApiError::InternalServerError
+            })?;
 
         client
             .get_vault_timeseries(
@@ -77,14 +77,7 @@ pub async fn get_vault_timeseries(
                 ApiError::InternalServerError
             })?
     } else {
-        let client = VaultMasterAPIClient::new(&vault.api_endpoint).map_err(|e| {
-            tracing::error!(
-                "Failed to create vault API client for vault {}: {}",
-                vault_id,
-                e
-            );
-            ApiError::InternalServerError
-        })?;
+        let client = JaffarClient::new(&vault.api_endpoint);
 
         client
             .get_vault_timeseries(

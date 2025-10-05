@@ -64,7 +64,9 @@ impl From<MasterApiError> for ApiError {
             MasterApiError::InternalServerError
             | MasterApiError::HttpError(_)
             | MasterApiError::JsonError(_)
-            | MasterApiError::AnyhowError(_) => Self::InternalServerError,
+            | MasterApiError::AnyhowError(_)
+            | MasterApiError::JaffarSdkError(_)
+            | MasterApiError::VesuSdkError(_) => Self::InternalServerError,
         }
     }
 }

@@ -16,7 +16,8 @@ use zerod_db::{
     ZerodPool,
     models::{UserPosition, UserTransaction, Vault},
 };
-use zerod_master::VaultMasterAPIClient;
+use zerod_master::JaffarClient;
+use zerod_master::VaultMasterClient;
 
 #[utoipa::path(
     get,
@@ -67,7 +68,7 @@ pub async fn get_user_position_summary(
         .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
 
     // Fetch current share price from vault API
-    let client = VaultMasterAPIClient::new(&vault.api_endpoint)?;
+    let client = JaffarClient::new(&vault.api_endpoint);
     let share_price_str = client.get_vault_share_price().await.map_err(|e| {
         tracing::error!("Failed to fetch vault share price: {e}");
         ApiError::InternalServerError
