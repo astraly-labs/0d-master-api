@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 pragma-common.workspace = true
+zerod_types.workspace = true
 
 anyhow.workspace = true
 bigdecimal.workspace = true

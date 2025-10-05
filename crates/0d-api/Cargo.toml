@@ -17,6 +17,7 @@ workspace = true
 zerod_db.workspace = true
 zerod_kpi.workspace = true
 zerod_master.workspace = true
+zerod_types.workspace = true
 pragma-common.workspace = true
 zerod_quoting.workspace = true
 

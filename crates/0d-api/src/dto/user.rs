@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use zerod_db::models::user_transaction::{TransactionStatus, TransactionType};
-use zerod_quoting::currencies::Currency;
+use zerod_types::Currency;
 
 pub use zerod_db::types::{PerformanceMetric, Timeframe};
 

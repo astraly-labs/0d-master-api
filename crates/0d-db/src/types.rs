@@ -102,20 +102,4 @@ impl Metric {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
-pub enum Currency {
-    #[default]
-    #[serde(rename = "USD")]
-    Usd,
-    #[serde(rename = "USDC")]
-    Usdc,
-}
-
-impl Currency {
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Usd => "USD",
-            Self::Usdc => "USDC",
-        }
-    }
-}
+pub use zerod_types::Currency;

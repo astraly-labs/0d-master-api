@@ -13,7 +13,7 @@ use crate::{
     helpers::{quote_to_currency, validate_indexer_status},
 };
 use zerod_db::{ZerodPool, models::UserKpi};
-use zerod_quoting::currencies::Currency;
+use zerod_types::Currency;
 
 #[derive(Debug, Deserialize)]
 pub struct HistoricalQuery {

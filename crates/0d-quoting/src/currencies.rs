@@ -7,20 +7,13 @@ use std::{
 use anyhow::Result;
 use moka::future::Cache;
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 use crate::pyth::fetch_pyth_price;
 
+pub use zerod_types::Currency;
+
 pub static CURRENCIES_PRICES: LazyLock<Arc<CurrenciesPrices>> =
     LazyLock::new(|| Arc::new(CurrenciesPrices::new()));
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Hash, Eq, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum Currency {
-    USD,
-    USDC,
-}
 
 /// Cached currency prices with 10-second TTL
 #[derive(Debug)]
@@ -67,17 +60,5 @@ impl CurrenciesPrices {
 impl Default for CurrenciesPrices {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl FromStr for Currency {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_uppercase().as_str() {
-            "USD" => Ok(Self::USD),
-            "USDC" => Ok(Self::USDC),
-            _ => Err(anyhow::anyhow!("Unsupported currency")),
-        }
     }
 }

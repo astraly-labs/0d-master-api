@@ -20,6 +20,7 @@ members = [
     "crates/0d-kpi",
     "crates/0d-master",
     "crates/0d-quoting",
+    "crates/0d-types",
 ]
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -74,6 +75,7 @@ zerod_indexer = { path = "crates/0d-indexer", default-features = false }
 zerod_kpi = { path = "crates/0d-kpi", default-features = false }
 zerod_master = { path = "crates/0d-master", default-features = false }
 zerod_quoting = { path = "crates/0d-quoting", default-features = false }
+zerod_types = { path = "crates/0d-types", default-features = false }
 
 # Pragma crates
 pragma-common = { version = "0.4.1", features = [
@@ -128,6 +130,7 @@ rust_decimal = { version = "1.35", features = [
 ] }
 moka = { version = "0.12", features = ["future"] }
 dashmap = "6.1.0"
+strum = { version = "0.26", features = ["derive"] }
 
 
 # OpenAPI

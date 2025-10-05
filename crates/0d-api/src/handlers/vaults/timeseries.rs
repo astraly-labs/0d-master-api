@@ -65,7 +65,7 @@ pub async fn get_vault_timeseries(
             .get_vault_timeseries(
                 params.metric.as_str(),
                 params.timeframe.as_str(),
-                params.currency.as_str(),
+                &params.currency.to_string(),
             )
             .await
             .map_err(|e| {
@@ -83,7 +83,7 @@ pub async fn get_vault_timeseries(
             .get_vault_timeseries(
                 params.metric.as_str(),
                 params.timeframe.as_str(),
-                params.currency.as_str(),
+                &params.currency.to_string(),
             )
             .await
             .map_err(|e| {
