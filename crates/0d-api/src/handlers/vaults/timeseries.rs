@@ -4,18 +4,14 @@ use axum::{
     response::IntoResponse,
 };
 
-use zerod_db::{
-    ZerodPool,
-    models::Vault,
-    types::{Currency, Metric, Timeframe},
-};
-use zerod_master::{JaffarClient, TimeseriesResponseDTO, VaultMasterClient, VesuClient};
+use zerod_db::types::{Currency, Metric, Timeframe};
+use zerod_master::TimeseriesResponseDTO;
 
 use crate::{
     AppState,
     dto::{ApiResponse, TimeseriesQuery},
-    errors::{ApiError, DatabaseErrorExt},
-    helpers::is_alternative_vault,
+    errors::ApiError,
+    helpers::{call_vault_backend, fetch_vault_with_client},
 };
 
 #[utoipa::path(
@@ -40,61 +36,22 @@ pub async fn get_vault_timeseries(
     Path(vault_id): Path<String>,
     Query(params): Query<TimeseriesQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let metric = params.metric.as_str().to_owned();
+    let timeframe = params.timeframe.as_str().to_owned();
+    let currency = params.currency.to_string();
+    let timeseries =
+        call_vault_backend(&client, &vault, "fetch vault timeseries", move |backend| {
+            let metric = metric.clone();
+            let timeframe = timeframe.clone();
+            let currency = currency.clone();
+            async move {
+                backend
+                    .get_vault_timeseries(&metric, &timeframe, &currency)
+                    .await
+            }
         })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's timeseries endpoint via helper
-    let timeseries = if is_alternative_vault(&vault.id) {
-        let client =
-            VesuClient::new(&vault.api_endpoint, &vault.contract_address).map_err(|e| {
-                tracing::error!(
-                    "Failed to create alternative vault API client for vault {}: {}",
-                    vault_id,
-                    e
-                );
-                ApiError::InternalServerError
-            })?;
-
-        client
-            .get_vault_timeseries(
-                params.metric.as_str(),
-                params.timeframe.as_str(),
-                &params.currency.to_string(),
-            )
-            .await
-            .map_err(|e| {
-                tracing::error!(
-                    "Failed to fetch alternative vault timeseries for vault {}: {}",
-                    vault_id,
-                    e
-                );
-                ApiError::InternalServerError
-            })?
-    } else {
-        let client = JaffarClient::new(&vault.api_endpoint);
-
-        client
-            .get_vault_timeseries(
-                params.metric.as_str(),
-                params.timeframe.as_str(),
-                &params.currency.to_string(),
-            )
-            .await
-            .map_err(|e| {
-                tracing::error!(
-                    "Failed to fetch vault timeseries for vault {}: {}",
-                    vault_id,
-                    e
-                );
-                ApiError::InternalServerError
-            })?
-    };
+        .await?;
 
     Ok(Json(ApiResponse::ok(timeseries)))
 }

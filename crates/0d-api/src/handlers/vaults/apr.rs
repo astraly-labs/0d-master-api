@@ -4,18 +4,14 @@ use axum::{
     response::IntoResponse,
 };
 
-use zerod_db::{
-    ZerodPool,
-    models::Vault,
-    types::{AprBasis, Timeframe},
-};
-use zerod_master::{AprSeriesDTO, AprSummaryDTO, JaffarClient, VaultMasterClient, VesuClient};
+use zerod_db::types::{AprBasis, Timeframe};
+use zerod_master::{AprSeriesDTO, AprSummaryDTO};
 
 use crate::{
     AppState,
     dto::{ApiResponse, AprSeriesQuery, AprSummaryQuery},
-    errors::{ApiError, DatabaseErrorExt},
-    helpers::is_alternative_vault,
+    errors::ApiError,
+    helpers::{call_vault_backend, fetch_vault_with_client},
 };
 
 #[utoipa::path(
@@ -38,35 +34,13 @@ pub async fn get_vault_apr_summary(
     Path(vault_id): Path<String>,
     Query(params): Query<AprSummaryQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's APR summary endpoint via helper
-    let apr_summary = if is_alternative_vault(&vault.id) {
-        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
-        client
-            .get_vault_apr_summary(params.apr_basis.as_str())
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to fetch alternative vault APR summary: {}", e);
-                ApiError::InternalServerError
-            })?
-    } else {
-        let client = JaffarClient::new(&vault.api_endpoint);
-        client
-            .get_vault_apr_summary(params.apr_basis.as_str())
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to fetch vault APR summary: {}", e);
-                ApiError::InternalServerError
-            })?
-    };
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let apr_basis = params.apr_basis.as_str().to_owned();
+    let apr_summary = call_vault_backend(&client, &vault, "fetch APR summary", move |backend| {
+        let apr_basis = apr_basis.clone();
+        async move { backend.get_vault_apr_summary(&apr_basis).await }
+    })
+    .await?;
 
     Ok(Json(ApiResponse::ok(apr_summary)))
 }
@@ -91,35 +65,13 @@ pub async fn get_vault_apr_series(
     Path(vault_id): Path<String>,
     Query(params): Query<AprSeriesQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's APR series endpoint via helper
-    let apr_series = if is_alternative_vault(&vault.id) {
-        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
-        client
-            .get_vault_apr_series(params.timeframe.as_str())
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to fetch alternative vault APR series: {e}");
-                ApiError::InternalServerError
-            })?
-    } else {
-        let client = JaffarClient::new(&vault.api_endpoint);
-        client
-            .get_vault_apr_series(params.timeframe.as_str())
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to fetch vault APR series: {e}");
-                ApiError::InternalServerError
-            })?
-    };
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let timeframe = params.timeframe.as_str().to_owned();
+    let apr_series = call_vault_backend(&client, &vault, "fetch APR series", move |backend| {
+        let timeframe = timeframe.clone();
+        async move { backend.get_vault_apr_series(&timeframe).await }
+    })
+    .await?;
 
     Ok(Json(ApiResponse::ok(apr_series)))
 }

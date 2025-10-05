@@ -4,15 +4,13 @@ use axum::{
     response::IntoResponse,
 };
 
-use zerod_db::{ZerodPool, models::Vault};
-use zerod_master::{
-    JaffarClient, LiquidityDTO, LiquiditySimulateResponseDTO, SlippageCurveDTO, VaultMasterClient,
-};
+use zerod_master::{LiquidityDTO, LiquiditySimulateResponseDTO, SlippageCurveDTO};
 
 use crate::{
     AppState,
     dto::{ApiResponse, LiquiditySimulateRequest},
-    errors::{ApiError, DatabaseErrorExt},
+    errors::ApiError,
+    helpers::{call_vault_backend, fetch_vault_with_client},
 };
 
 #[utoipa::path(
@@ -32,21 +30,14 @@ pub async fn get_vault_liquidity(
     State(state): State<AppState>,
     Path(vault_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's liquidity endpoint via helper
-    let client = JaffarClient::new(&vault.api_endpoint);
-    let liquidity = client.get_vault_liquidity().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault liquidity: {}", e);
-        ApiError::InternalServerError
-    })?;
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let liquidity = call_vault_backend(
+        &client,
+        &vault,
+        "fetch vault liquidity",
+        |backend| async move { backend.get_vault_liquidity().await },
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(liquidity)))
 }
@@ -68,21 +59,14 @@ pub async fn get_vault_slippage_curve(
     State(state): State<AppState>,
     Path(vault_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's slippage curve endpoint via helper
-    let client = JaffarClient::new(&vault.api_endpoint);
-    let curve = client.get_vault_slippage_curve().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault slippage curve: {}", e);
-        ApiError::InternalServerError
-    })?;
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let curve = call_vault_backend(
+        &client,
+        &vault,
+        "fetch vault slippage curve",
+        |backend| async move { backend.get_vault_slippage_curve().await },
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(curve)))
 }
@@ -114,24 +98,15 @@ pub async fn simulate_vault_liquidity(
         ));
     }
 
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's liquidity simulation endpoint via helper
-    let client = JaffarClient::new(&vault.api_endpoint);
-    let simulation = client
-        .simulate_liquidity(&request.amount)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to simulate vault liquidity: {}", e);
-            ApiError::InternalServerError
-        })?;
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let amount = request.amount.clone();
+    let simulation = call_vault_backend(
+        &client,
+        &vault,
+        "simulate vault liquidity",
+        move |backend| async move { backend.simulate_liquidity(&amount).await },
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(simulation)))
 }
