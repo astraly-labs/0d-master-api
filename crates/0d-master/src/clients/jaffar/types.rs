@@ -1,6 +1,9 @@
-use crate::dto::{
-    AprBasis, AprPoint, AprSeriesDTO, AprSummaryDTO, CompositionDTO, CompositionPosition,
-    GetStatsDTO, NavLatestDTO, TimeseriesPoint, TimeseriesResponseDTO,
+use crate::{
+    VaultInfoResponse,
+    dto::{
+        AprBasis, AprPoint, AprSeriesDTO, AprSummaryDTO, CompositionDTO, CompositionPosition,
+        GetStatsDTO, NavLatestDTO, TimeseriesPoint, TimeseriesResponseDTO,
+    },
 };
 
 // ============================================================================
@@ -165,6 +168,23 @@ impl From<jaffar_sdk::types::CompositionResponse> for CompositionDTO {
         CompositionDTO {
             as_of: comp.as_of,
             positions: comp.positions.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+// ============================================================================
+// Info conversions
+// ============================================================================
+
+impl From<jaffar_sdk::types::VaultInfoResponse> for VaultInfoResponse {
+    fn from(info: jaffar_sdk::types::VaultInfoResponse) -> Self {
+        VaultInfoResponse {
+            current_epoch: info.current_epoch,
+            underlying_currency: info.underlying_currency,
+            pending_withdrawals_assets: info.pending_withdrawals_assets,
+            aum: info.aum,
+            buffer: info.buffer,
+            share_price_in_usd: info.share_price_in_usd,
         }
     }
 }

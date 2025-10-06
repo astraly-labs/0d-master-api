@@ -2323,11 +2323,12 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jaffar-sdk"
-version = "0.1.0"
+version = "0.1.1"
 source = "sparse+https://registry.devnet.pragma.build/api/v1/crates/"
-checksum = "f865b53f6700cb6a645eb05a5c7f94d6d2ad5cdd073790c4195473dc429cf7e3"
+checksum = "e410b429d3e41a2c879c44423c8afd31d4fab912bea942eb40f56c8d376523d1"
 dependencies = [
  "bytes",
+ "chrono",
  "futures-core",
  "progenitor-client",
  "reqwest 0.12.23",
@@ -5853,7 +5854,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
