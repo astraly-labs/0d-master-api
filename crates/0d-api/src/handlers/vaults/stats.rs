@@ -4,14 +4,13 @@ use axum::{
     response::IntoResponse,
 };
 
-use zerod_db::{ZerodPool, models::Vault};
-use zerod_master::{GetStatsDTO, JaffarClient, VaultMasterClient, VesuClient};
+use zerod_master::GetStatsDTO;
 
 use crate::{
     AppState,
     dto::ApiResponse,
-    errors::{ApiError, DatabaseErrorExt},
-    helpers::is_alternative_vault,
+    errors::ApiError,
+    helpers::{call_vault_backend, fetch_vault_with_client},
 };
 
 #[utoipa::path(
@@ -31,29 +30,12 @@ pub async fn get_vault_stats(
     State(state): State<AppState>,
     Path(vault_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let vault_stats =
+        call_vault_backend(&client, &vault, "fetch vault stats", |backend| async move {
+            backend.get_vault_stats().await
         })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's portfolio/stats endpoint via helper
-    let vault_stats = if is_alternative_vault(&vault.id) {
-        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
-        client.get_vault_stats().await.map_err(|e| {
-            tracing::error!("Failed to fetch alternative vault stats: {}", e);
-            ApiError::InternalServerError
-        })?
-    } else {
-        let client = JaffarClient::new(&vault.api_endpoint);
-        client.get_vault_stats().await.map_err(|e| {
-            tracing::error!("Failed to fetch vault stats: {}", e);
-            ApiError::InternalServerError
-        })?
-    };
+        .await?;
 
     Ok(Json(ApiResponse::ok(vault_stats)))
 }

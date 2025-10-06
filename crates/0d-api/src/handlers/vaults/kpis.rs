@@ -4,13 +4,14 @@ use axum::{
     response::IntoResponse,
 };
 
-use zerod_db::{ZerodPool, models::Vault, types::Timeframe};
-use zerod_master::{JaffarClient, KpisDTO, VaultMasterClient};
+use zerod_db::types::Timeframe;
+use zerod_master::KpisDTO;
 
 use crate::{
     AppState,
     dto::{ApiResponse, TimeframeQuery},
-    errors::{ApiError, DatabaseErrorExt},
+    errors::ApiError,
+    helpers::{call_vault_backend, fetch_vault_with_client},
 };
 
 #[utoipa::path(
@@ -35,24 +36,13 @@ pub async fn get_vault_kpis(
 ) -> Result<impl IntoResponse, ApiError> {
     tracing::info!("Getting vault KPIs for {:?}", params);
 
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's KPIs endpoint via helper
-    let client = JaffarClient::new(&vault.api_endpoint);
-    let kpis = client
-        .get_vault_kpis(params.timeframe.as_str())
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch vault KPIs for vault {}: {}", vault_id, e);
-            ApiError::InternalServerError
-        })?;
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let timeframe = params.timeframe.as_str().to_owned();
+    let kpis = call_vault_backend(&client, &vault, "fetch vault KPIs", move |backend| {
+        let timeframe = timeframe.clone();
+        async move { backend.get_vault_kpis(&timeframe).await }
+    })
+    .await?;
 
     Ok(Json(ApiResponse::ok(kpis)))
 }

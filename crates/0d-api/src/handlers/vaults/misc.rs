@@ -4,14 +4,13 @@ use axum::{
     response::IntoResponse,
 };
 
-use zerod_db::{ZerodPool, models::Vault};
-use zerod_master::{CapsDTO, JaffarClient, NavLatestDTO, VaultMasterClient, VesuClient};
+use zerod_master::{CapsDTO, NavLatestDTO};
 
 use crate::{
     AppState,
     dto::{ApiResponse, VaultInfoDTO},
-    errors::{ApiError, DatabaseErrorExt},
-    helpers::is_alternative_vault,
+    errors::ApiError,
+    helpers::{call_vault_backend, fetch_vault_with_client},
 };
 
 #[utoipa::path(
@@ -31,21 +30,11 @@ pub async fn get_vault_caps(
     State(state): State<AppState>,
     Path(vault_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's caps endpoint via helper
-    let client = JaffarClient::new(&vault.api_endpoint);
-    let caps = client.get_vault_caps().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault caps: {}", e);
-        ApiError::InternalServerError
-    })?;
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let caps = call_vault_backend(&client, &vault, "fetch vault caps", |backend| async move {
+        backend.get_vault_caps().await
+    })
+    .await?;
 
     Ok(Json(ApiResponse::ok(caps)))
 }
@@ -67,29 +56,14 @@ pub async fn get_vault_nav_latest(
     State(state): State<AppState>,
     Path(vault_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's NAV latest endpoint via helper
-    let nav_latest = if is_alternative_vault(&vault.id) {
-        let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
-        client.get_vault_nav_latest().await.map_err(|e| {
-            tracing::error!("Failed to fetch alternative vault NAV latest: {}", e);
-            ApiError::InternalServerError
-        })?
-    } else {
-        let client = JaffarClient::new(&vault.api_endpoint);
-        client.get_vault_nav_latest().await.map_err(|e| {
-            tracing::error!("Failed to fetch vault NAV latest: {}", e);
-            ApiError::InternalServerError
-        })?
-    };
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let nav_latest = call_vault_backend(
+        &client,
+        &vault,
+        "fetch vault nav latest",
+        |backend| async move { backend.get_vault_nav_latest().await },
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(nav_latest)))
 }
@@ -111,21 +85,12 @@ pub async fn get_vault_info(
     State(state): State<AppState>,
     Path(vault_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let vault_info =
+        call_vault_backend(&client, &vault, "fetch vault info", |backend| async move {
+            backend.get_vault_info().await
         })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's info endpoint via helper
-    let client = JaffarClient::new(&vault.api_endpoint);
-    let vault_info = client.get_vault_info().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault info: {}", e);
-        ApiError::InternalServerError
-    })?;
+        .await?;
 
     // Convert the internal VaultInfoResponse to the public DTO
     let info_dto = VaultInfoDTO {

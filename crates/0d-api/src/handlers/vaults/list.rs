@@ -1,14 +1,13 @@
 use axum::{Json, extract::State, response::IntoResponse};
-use futures::future::join_all;
+use futures::future::try_join_all;
 
 use crate::{
     AppState,
     dto::{ApiResponse, VaultListItem, VaultListResponse},
     errors::ApiError,
-    helpers::{is_alternative_vault, map_status},
+    helpers::{VaultBackendClient, call_vault_backend, map_status},
 };
 use zerod_db::{ZerodPool, models::Vault};
-use zerod_master::{JaffarClient, VaultMasterClient, VesuClient};
 
 #[utoipa::path(
     get,
@@ -25,63 +24,29 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
         .interact_with_context("fetch all vaults".to_string(), Vault::find_all)
         .await?;
 
-    // Fetch vault stats from external APIs in parallel
-    let fetch_futures = vaults.iter().map(|vault| {
-        let vault = vault.clone();
-        async move {
-            let (tvl, apr, average_redeem_delay, last_reported) = if is_alternative_vault(&vault.id) {
-                match VesuClient::new(&vault.api_endpoint, &vault.contract_address) {
-                    Ok(client) => match client.get_vault_stats().await {
-                        Ok(stats) => {
-                            (stats.tvl, stats.past_month_apr_pct.to_string(), None, None)
-                        }
-                        Err(err) => {
-                            tracing::warn!(
-                                vault_id = %vault.id,
-                                error = %err,
-                                "Failed to fetch alternative vault stats"
-                            );
-                            ("0".to_string(), "0".to_string(), None, None)
-                        }
-                    },
-                    Err(err) => {
-                        tracing::warn!(
-                            vault_id = %vault.id,
-                            error = %err,
-                            "Failed to create alternative vault client"
-                        );
-                        ("0".to_string(), "0".to_string(), None, None)
-                    }
-                }
-            } else {
-                let client = JaffarClient::new(&vault.api_endpoint);
-                match client.get_vault_stats().await {
-                    Ok(p) => (p.tvl, p.past_month_apr_pct.to_string(), None, None),
-                    Err(err) => {
-                        tracing::warn!(vault_id = %vault.id, error = %err, "Failed to fetch vault stats");
-                        ("0".to_string(), "0".to_string(), None, None)
-                    }
-                }
-            };
+    let fetch_futures = vaults.into_iter().map(|vault| async move {
+        let client = VaultBackendClient::new(&vault)?;
+        let stats =
+            call_vault_backend(&client, &vault, "fetch vault stats", |backend| async move {
+                backend.get_vault_stats().await
+            })
+            .await?;
 
-            let status = map_status(&vault.status);
-
-            VaultListItem {
-                id: vault.id,
-                name: vault.name,
-                description: vault.description,
-                chain: vault.chain,
-                symbol: vault.symbol,
-                tvl,
-                apr,
-                status,
-                average_redeem_delay,
-                last_reported,
-            }
-        }
+        Ok::<_, ApiError>(VaultListItem {
+            id: vault.id,
+            name: vault.name,
+            description: vault.description,
+            chain: vault.chain,
+            symbol: vault.symbol,
+            tvl: stats.tvl,
+            apr: stats.past_month_apr_pct.to_string(),
+            status: map_status(&vault.status),
+            average_redeem_delay: None,
+            last_reported: None,
+        })
     });
 
-    let items = join_all(fetch_futures).await;
+    let items = try_join_all(fetch_futures).await?;
 
     Ok(Json(ApiResponse::ok(VaultListResponse { items })))
 }
