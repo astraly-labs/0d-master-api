@@ -9,6 +9,7 @@ pub struct VaultListItem {
     pub chain: String,
     pub symbol: String,
     pub tvl: String,
+    pub underlying_currency: String,
     pub apr: String,
     pub status: String,
     pub average_redeem_delay: Option<String>,

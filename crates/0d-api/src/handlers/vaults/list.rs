@@ -39,6 +39,7 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
             chain: vault.chain,
             symbol: vault.symbol,
             tvl: stats.tvl,
+            underlying_currency: vault.base_asset,
             apr: stats.past_month_apr_pct.to_string(),
             status: map_status(&vault.status),
             average_redeem_delay: None,

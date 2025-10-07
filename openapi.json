@@ -7,7 +7,7 @@
       "name": "MIT",
       "identifier": "MIT"
     },
-    "version": "0.1.0"
+    "version": "0.1.6"
   },
   "servers": [
     {
@@ -2089,6 +2089,7 @@
           "chain",
           "symbol",
           "tvl",
+          "underlying_currency",
           "apr",
           "status"
         ],
@@ -2130,6 +2131,9 @@
             "type": "string"
           },
           "tvl": {
+            "type": "string"
+          },
+          "underlying_currency": {
             "type": "string"
           }
         }

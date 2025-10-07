@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.1.0"
+version = "0.1.6"
 edition = "2024"
 rust-version = "1.89.0"
 description = "0D Master API for vaults"
