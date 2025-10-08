@@ -8,12 +8,13 @@ pub mod router;
 use std::net::SocketAddr;
 
 use anyhow::Context;
+use axum::http::{HeaderValue, Method};
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use deadpool_diesel::postgres::Pool;
 use std::{env, time::Duration};
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 
 use pragma_common::services::{Service, ServiceRunner};
 
@@ -37,6 +38,62 @@ impl ApiService {
             state,
             host: host.to_owned(),
             port,
+        }
+    }
+}
+
+fn cors_layer_from_env() -> CorsLayer {
+    match env::var("CORS_ALLOWED_ORIGINS") {
+        Ok(origins) => {
+            let allowed_origins: Vec<HeaderValue> = origins
+                .split(',')
+                .filter_map(|origin| {
+                    let trimmed = origin.trim();
+                    if trimmed.is_empty() {
+                        return None;
+                    }
+                    match HeaderValue::from_str(trimmed) {
+                        Ok(value) => Some(value),
+                        Err(err) => {
+                            tracing::warn!(
+                                origin = trimmed,
+                                error = %err,
+                                "Invalid origin in CORS_ALLOWED_ORIGINS, skipping",
+                            );
+                            None
+                        }
+                    }
+                })
+                .collect();
+
+            if allowed_origins.is_empty() {
+                tracing::warn!(
+                    "CORS_ALLOWED_ORIGINS was set but no valid origins were parsed; falling back to permissive CORS",
+                );
+                return CorsLayer::permissive();
+            }
+
+            tracing::info!(
+                allowed = %origins,
+                "Configured restricted CORS origins from environment",
+            );
+
+            CorsLayer::new()
+                .allow_credentials(true)
+                .allow_headers(AllowHeaders::mirror_request())
+                .allow_methods(AllowMethods::list([
+                    Method::GET,
+                    Method::POST,
+                    Method::PUT,
+                    Method::PATCH,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ]))
+                .allow_origin(AllowOrigin::list(allowed_origins))
+        }
+        Err(_) => {
+            tracing::info!("CORS_ALLOWED_ORIGINS not set; using permissive CORS configuration",);
+            CorsLayer::permissive()
         }
     }
 }
@@ -116,7 +173,7 @@ impl Service for ApiService {
                     base
                 };
 
-                base.layer(CorsLayer::permissive())
+                base.layer(cors_layer_from_env())
             };
 
             tracing::info!("🧩 API started at http://{}", socket_addr);

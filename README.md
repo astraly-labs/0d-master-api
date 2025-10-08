@@ -99,6 +99,7 @@ The service is configured via environment variables:
 - `DATABASE_URL`: PostgreSQL connection string
 - `DATABASE_MAX_CONN`: Maximum database connections in the pool
 - `API_PORT`: Port for the API server
+- `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed browser origins (`http://localhost:3000,https://app.0d.finance` is a safe starting point; unset to fall back to permissive mode)
 - `OTEL_COLLECTOR_ENDPOINT`: OpenTelemetry collector endpoint for tracing
 
 ## 📚 API Documentation
