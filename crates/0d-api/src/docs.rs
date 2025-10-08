@@ -32,7 +32,8 @@ impl Modify for ServerAddon {
     tags(
         (name = "zerod_bin", description = "0d, master api"),
         (name = "User", description = "User profile endpoints"),
-        (name = "Vaults", description = "Vault management endpoints")
+        (name = "Vaults", description = "Vault management endpoints"),
+        (name = "Deposits", description = "Deposit intents and attributions")
     )
 )]
 pub struct ApiDoc;

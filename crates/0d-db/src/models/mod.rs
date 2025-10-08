@@ -1,3 +1,5 @@
+pub mod attribution;
+pub mod deposit_intent;
 pub mod indexer_state;
 pub mod user;
 pub mod user_kpi;
@@ -6,6 +8,10 @@ pub mod user_position;
 pub mod user_transaction;
 pub mod vault;
 
+pub use attribution::{Attribution, AttributionSource, NewAttribution};
+pub use deposit_intent::{
+    DepositIntent, DepositIntentStatus, DepositIntentStatusUpdate, NewDepositIntent,
+};
 pub use indexer_state::{IndexerState, IndexerStateUpdate, IndexerStatus, NewIndexerState};
 pub use user::{NewUser, User};
 pub use user_kpi::{NewUserKpi, UserKpi, UserKpiUpdate};

@@ -43,12 +43,20 @@ fn create_vaults_router() -> Router<AppState> {
             "/{vault_id}/composition/series",
             get(handlers::get_vault_composition_series),
         )
+        .route(
+            "/{vault_id}/deposits/intents",
+            post(handlers::create_deposit_intent),
+        )
         .route("/{vault_id}/caps", get(handlers::get_vault_caps))
         .route(
             "/{vault_id}/nav/latest",
             get(handlers::get_vault_nav_latest),
         )
         .route("/{vault_id}/info", get(handlers::get_vault_info))
+}
+
+fn create_deposits_router() -> Router<AppState> {
+    Router::new().route("/intents/{intent_id}", get(handlers::get_deposit_intent))
 }
 
 fn create_users_router() -> Router<AppState> {
@@ -83,6 +91,7 @@ pub fn api_router<T: OpenApiT>(_state: AppState) -> Router<AppState> {
         .route("/health", get(health))
         .nest("/v1/vaults", create_vaults_router())
         .nest("/v1/users", create_users_router())
+        .nest("/v1/deposits", create_deposits_router())
         .merge(SwaggerUi::new("/v1/docs").url("/v1/docs/openapi.json", open_api))
         .fallback(handler_404)
 }

@@ -170,6 +170,62 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    deposit_intents (id) {
+        id -> Text,
+        partner_id -> Text,
+        #[max_length = 50]
+        vault_id -> Varchar,
+        chain_id -> Int8,
+        #[max_length = 100]
+        receiver -> Varchar,
+        amount_dec -> Numeric,
+        created_ts -> Timestamptz,
+        expires_ts -> Timestamptz,
+        #[max_length = 16]
+        status -> Varchar,
+        meta_json -> Nullable<Jsonb>,
+    }
+}
+
+diesel::table! {
+    attributions (tx_id) {
+        tx_id -> Int4,
+        #[max_length = 100]
+        tx_hash -> Varchar,
+        intent_id -> Nullable<Text>,
+        partner_id -> Nullable<Text>,
+        #[max_length = 16]
+        source -> Varchar,
+        confidence -> Numeric,
+        assets_dec -> Numeric,
+        shares_dec -> Nullable<Numeric>,
+        created_ts -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    confirmed_deposits (tx_hash) {
+        #[max_length = 100]
+        tx_hash -> Varchar,
+        block_time -> Timestamptz,
+        #[max_length = 100]
+        receiver -> Varchar,
+        #[max_length = 50]
+        vault_id -> Varchar,
+        assets_dec -> Numeric,
+        shares_dec -> Nullable<Numeric>,
+        #[max_length = 20]
+        status -> Varchar,
+        #[sql_name = "type"]
+        #[max_length = 20]
+        type_ -> Varchar,
+    }
+}
+
+diesel::joinable!(attributions -> deposit_intents (intent_id));
+diesel::joinable!(attributions -> user_transactions (tx_id));
+diesel::joinable!(deposit_intents -> vaults (vault_id));
 diesel::joinable!(indexer_state -> vaults (vault_id));
 diesel::joinable!(user_kpis -> users (user_address));
 diesel::joinable!(user_kpis -> vaults (vault_id));
@@ -179,7 +235,10 @@ diesel::joinable!(user_transactions -> users (user_address));
 diesel::joinable!(user_transactions -> vaults (vault_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    attributions,
     api_logs,
+    confirmed_deposits,
+    deposit_intents,
     indexer_state,
     user_kpis,
     user_portfolio_history,

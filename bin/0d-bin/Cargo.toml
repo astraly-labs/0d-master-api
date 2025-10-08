@@ -16,6 +16,7 @@ zerod_db.workspace = true
 zerod_api.workspace = true
 zerod_indexer.workspace = true
 zerod_kpi.workspace = true
+zerod_metrics.workspace = true
 
 anyhow.workspace = true
 clap.workspace = true

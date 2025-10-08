@@ -1,6 +1,7 @@
 use std::{future::Future, sync::Arc};
 
 use rust_decimal::Decimal;
+use tiny_keccak::Hasher;
 use zerod_db::{
     ZerodPool,
     models::{IndexerState, Vault},
@@ -161,6 +162,62 @@ pub async fn validate_indexer_status(
     }
 
     Ok(())
+}
+
+pub fn normalize_starknet_address(address: &str) -> Result<String, ApiError> {
+    let trimmed = address.trim();
+    let without_prefix = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+        .unwrap_or(trimmed);
+
+    if without_prefix.is_empty() || without_prefix.len() > 64 {
+        return Err(ApiError::BadRequest(
+            "Receiver address must be a hexadecimal string up to 32 bytes".to_string(),
+        ));
+    }
+
+    if !without_prefix.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(ApiError::BadRequest(
+            "Receiver address must be a hexadecimal string".to_string(),
+        ));
+    }
+
+    let padded = format!("{:0>64}", without_prefix.to_lowercase());
+    let address_bytes = hex::decode(&padded).map_err(|_| {
+        ApiError::BadRequest("Receiver address must be a valid hexadecimal string".to_string())
+    })?;
+
+    let hash = starknet_keccak_bytes(&address_bytes);
+    let hash_hex = hex::encode(hash);
+
+    let mut checksummed = String::with_capacity(66);
+    checksummed.push_str("0x");
+
+    for (idx, ch) in padded.chars().enumerate() {
+        if ch.is_ascii_digit() {
+            checksummed.push(ch);
+            continue;
+        }
+
+        let hash_char = hash_hex.as_bytes()[idx];
+        if hash_char >= b'8' {
+            checksummed.push(ch.to_ascii_uppercase());
+        } else {
+            checksummed.push(ch);
+        }
+    }
+
+    Ok(checksummed)
+}
+
+fn starknet_keccak_bytes(data: &[u8]) -> [u8; 32] {
+    let mut hasher = tiny_keccak::Keccak::v256();
+    hasher.update(data);
+    let mut hash = [0u8; 32];
+    hasher.finalize(&mut hash);
+    hash[0] &= 0b0000_0011;
+    hash
 }
 
 /// Quote an amount to a target currencys

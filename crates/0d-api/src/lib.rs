@@ -5,17 +5,16 @@ pub mod handlers;
 pub mod helpers;
 pub mod router;
 
-use std::net::SocketAddr;
-
 use anyhow::Context;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use deadpool_diesel::postgres::Pool;
-use std::{env, time::Duration};
+use std::{env, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::cors::CorsLayer;
 
 use pragma_common::services::{Service, ServiceRunner};
+use zerod_metrics::MetricsRegistry;
 
 use docs::ApiDoc;
 use router::api_router;
@@ -23,6 +22,7 @@ use router::api_router;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: Pool,
+    pub metrics: Arc<MetricsRegistry>,
 }
 
 pub struct ApiService {

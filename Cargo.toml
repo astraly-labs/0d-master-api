@@ -21,6 +21,7 @@ members = [
     "crates/0d-master",
     "crates/0d-quoting",
     "crates/0d-types",
+    "crates/0d-metrics",
 ]
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -76,6 +77,7 @@ zerod_kpi = { path = "crates/0d-kpi", default-features = false }
 zerod_master = { path = "crates/0d-master", default-features = false }
 zerod_quoting = { path = "crates/0d-quoting", default-features = false }
 zerod_types = { path = "crates/0d-types", default-features = false }
+zerod_metrics = { path = "crates/0d-metrics", default-features = false }
 
 # Pragma crates
 pragma-common = { version = "0.4.1", features = [
@@ -130,7 +132,12 @@ rust_decimal = { version = "1.35", features = [
 ] }
 moka = { version = "0.12", features = ["future"] }
 dashmap = "6.1.0"
+hex = "0.4"
+tiny-keccak = { version = "2.0", features = ["sha3"] }
+opentelemetry = { version = "0.26", features = ["metrics"] }
+ulid = { version = "1.1", features = ["serde"] }
 strum = { version = "0.26", features = ["derive"] }
+strum_macros = "0.26"
 
 
 # OpenAPI

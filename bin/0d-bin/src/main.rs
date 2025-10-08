@@ -13,6 +13,7 @@ use zerod_api::{ApiService, AppState};
 use zerod_db::{init_pool, run_migrations};
 use zerod_indexer::task::IndexerTask;
 use zerod_kpi::KpiTask;
+use zerod_metrics::MetricsRegistry;
 
 /// The list of all the starknet rpcs that the FallbackProvider may use.
 /// They're sorted by priority (so we sorted them by reliability here).
@@ -50,7 +51,12 @@ async fn main() -> Result<()> {
     let pool = init_pool(app_name, &database_url)?;
     run_migrations(&pool).await?;
 
-    let app_state = AppState { pool: pool.clone() };
+    let metrics = MetricsRegistry::new();
+
+    let app_state = AppState {
+        pool: pool.clone(),
+        metrics: metrics.clone(),
+    };
 
     let api_service = ApiService::new(app_state, "0.0.0.0", api_port);
 

@@ -20,6 +20,7 @@ zerod_master.workspace = true
 zerod_types.workspace = true
 pragma-common.workspace = true
 zerod_quoting.workspace = true
+zerod_metrics.workspace = true
 
 async-trait.workspace = true
 anyhow.workspace = true
@@ -41,6 +42,9 @@ utoipa.workspace = true
 utoipa-swagger-ui.workspace = true
 utoipauto.workspace = true
 rust_decimal.workspace = true
+hex.workspace = true
+tiny-keccak.workspace = true
+ulid.workspace = true
 
 axum-tracing-opentelemetry.workspace = true
 reqwest.workspace = true
