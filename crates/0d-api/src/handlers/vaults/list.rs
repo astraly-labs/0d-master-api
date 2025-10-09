@@ -26,25 +26,40 @@ pub async fn list_vaults(State(state): State<AppState>) -> Result<impl IntoRespo
 
     let fetch_futures = vaults.into_iter().map(|vault| async move {
         let client = VaultBackendClient::new(&vault)?;
-        let stats =
+        if let Ok(stats) =
             call_vault_backend(&client, &vault, "fetch vault stats", |backend| async move {
                 backend.get_vault_stats().await
             })
-            .await?;
-
-        Ok::<_, ApiError>(VaultListItem {
-            id: vault.id,
-            name: vault.name,
-            description: vault.description,
-            chain: vault.chain,
-            symbol: vault.symbol,
-            tvl: stats.tvl,
-            underlying_currency: vault.base_asset,
-            apr: stats.past_month_apr_pct.to_string(),
-            status: map_status(&vault.status),
-            average_redeem_delay: None,
-            last_reported: None,
-        })
+            .await
+        {
+            Ok::<_, ApiError>(VaultListItem {
+                id: vault.id,
+                name: vault.name,
+                description: vault.description,
+                chain: vault.chain,
+                symbol: vault.symbol,
+                tvl: stats.tvl,
+                underlying_currency: vault.base_asset,
+                apr: stats.past_month_apr_pct.to_string(),
+                status: map_status(&vault.status),
+                average_redeem_delay: None,
+                last_reported: None,
+            })
+        } else {
+            Ok::<_, ApiError>(VaultListItem {
+                id: vault.id,
+                name: vault.name,
+                description: vault.description,
+                chain: vault.chain,
+                symbol: vault.symbol,
+                tvl: "0.0".to_string(),
+                underlying_currency: vault.base_asset,
+                apr: "0.0".to_string(),
+                status: map_status(&vault.status),
+                average_redeem_delay: None,
+                last_reported: None,
+            })
+        }
     });
 
     let items = try_join_all(fetch_futures).await?;
