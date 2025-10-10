@@ -2323,9 +2323,9 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jaffar-sdk"
-version = "0.1.1"
+version = "0.1.2"
 source = "sparse+https://registry.devnet.pragma.build/api/v1/crates/"
-checksum = "e410b429d3e41a2c879c44423c8afd31d4fab912bea942eb40f56c8d376523d1"
+checksum = "83b4948982a39bc52328f8f214d185713c9d9a20fae905d32717b920f94653ed"
 dependencies = [
  "bytes",
  "chrono",

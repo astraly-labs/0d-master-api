@@ -91,7 +91,7 @@ evian = { version = "0.3.3", registry = "pragma", features = [
     "starknet_vault",
 ] }
 pragma-rs = "0.2.9"
-jaffar-sdk = { version = "0.1.1", registry = "pragma" }
+jaffar-sdk = { version = "0.1.2", registry = "pragma" }
 vesu-sdk = { version = "0.1.0", registry = "pragma" }
 
 

@@ -55,7 +55,7 @@ pub struct NavLatestDTO {
     pub aum: String,
     pub var_since_prev_pct: f64,
     pub apr_since_prev_pct: f64,
-    pub report_url: String,
+    pub report_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]

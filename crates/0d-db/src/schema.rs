@@ -19,6 +19,64 @@ diesel::table! {
 }
 
 diesel::table! {
+    attributions (tx_id) {
+        tx_id -> Int4,
+        #[max_length = 100]
+        tx_hash -> Varchar,
+        intent_id -> Nullable<Text>,
+        partner_id -> Nullable<Text>,
+        #[max_length = 16]
+        source -> Varchar,
+        confidence -> Numeric,
+        assets_dec -> Numeric,
+        shares_dec -> Nullable<Numeric>,
+        created_ts -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    deposit_intents (id) {
+        id -> Text,
+        partner_id -> Text,
+        #[max_length = 50]
+        vault_id -> Varchar,
+        chain_id -> Int8,
+        #[max_length = 100]
+        receiver -> Varchar,
+        amount_dec -> Numeric,
+        created_ts -> Timestamptz,
+        expires_ts -> Timestamptz,
+        #[max_length = 16]
+        status -> Varchar,
+        meta_json -> Nullable<Jsonb>,
+    }
+}
+
+diesel::table! {
+    deposit_requests (id) {
+        #[max_length = 36]
+        id -> Varchar,
+        #[max_length = 50]
+        vault_id -> Varchar,
+        #[max_length = 100]
+        user_address -> Varchar,
+        amount -> Numeric,
+        #[max_length = 100]
+        referral_code -> Nullable<Varchar>,
+        transaction -> Jsonb,
+        #[max_length = 100]
+        tx_hash -> Nullable<Varchar>,
+        #[max_length = 20]
+        status -> Varchar,
+        #[max_length = 64]
+        error_code -> Nullable<Varchar>,
+        error_message -> Nullable<Text>,
+        created_at -> Nullable<Timestamptz>,
+        updated_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     indexer_state (id) {
         id -> Int4,
         #[max_length = 50]
@@ -127,6 +185,26 @@ diesel::table! {
 }
 
 diesel::table! {
+    vault_reports (id) {
+        id -> Int4,
+        #[max_length = 100]
+        tx_hash -> Varchar,
+        block_number -> Int8,
+        block_timestamp -> Timestamptz,
+        #[max_length = 50]
+        vault_id -> Varchar,
+        new_epoch -> Numeric,
+        new_handled_epoch_len -> Numeric,
+        total_supply -> Numeric,
+        total_aum -> Numeric,
+        management_fee_shares -> Numeric,
+        performance_fee_shares -> Numeric,
+        created_at -> Nullable<Timestamptz>,
+        updated_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     vaults (id) {
         #[max_length = 50]
         id -> Varchar,
@@ -170,6 +248,10 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(attributions -> deposit_intents (intent_id));
+diesel::joinable!(attributions -> user_transactions (tx_id));
+diesel::joinable!(deposit_intents -> vaults (vault_id));
+diesel::joinable!(deposit_requests -> vaults (vault_id));
 diesel::joinable!(indexer_state -> vaults (vault_id));
 diesel::joinable!(user_kpis -> users (user_address));
 diesel::joinable!(user_kpis -> vaults (vault_id));
@@ -177,14 +259,19 @@ diesel::joinable!(user_positions -> users (user_address));
 diesel::joinable!(user_positions -> vaults (vault_id));
 diesel::joinable!(user_transactions -> users (user_address));
 diesel::joinable!(user_transactions -> vaults (vault_id));
+diesel::joinable!(vault_reports -> vaults (vault_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     api_logs,
+    attributions,
+    deposit_intents,
+    deposit_requests,
     indexer_state,
     user_kpis,
     user_portfolio_history,
     user_positions,
     user_transactions,
     users,
+    vault_reports,
     vaults,
 );

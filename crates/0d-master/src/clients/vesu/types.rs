@@ -159,7 +159,7 @@ impl From<NavHistory> for Option<NavLatestDTO> {
                 .to_string(),
             var_since_prev_pct,
             apr_since_prev_pct,
-            report_url: String::new(),
+            report_url: None,
         })
     }
 }
