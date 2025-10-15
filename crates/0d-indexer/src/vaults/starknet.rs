@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use chrono::{DateTime, Utc};
 use evian::contracts::starknet::vault::StarknetVaultContract;
 use evian::contracts::starknet::vault::data::indexer::events::{
-    DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, VaultAddress, VaultEvent,
+    DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, ReportEvent, VaultAddress, VaultEvent
 };
 use evian::{
     contracts::starknet::vault::StarknetVaultIndexer, utils::indexer::handler::OutputEvent,
@@ -17,6 +17,7 @@ use zerod_db::models::{
     user::User,
     user_position::{NewUserPosition, UserPosition, UserPositionUpdate},
     user_transaction::{NewUserTransaction, TransactionStatus, TransactionType, UserTransaction},
+    vault_report::{NewVaultReport, VaultReport},
 };
 
 use crate::vaults::helpers::felt_to_hex_str;
@@ -116,16 +117,95 @@ impl StarknetIndexer {
                 self.handle_redeem_claimed_event(claim, tx_hash, block_number, block_timestamp)
                     .await?;
             }
-            #[allow(clippy::match_same_arms)]
-            VaultEvent::Report(_) => {
-                // Report events don't directly create user transactions, but they provide important
-                // vault state information that could be used for calculating share prices
+            VaultEvent::Report(report) => {
+                self.handle_report_event(report, tx_hash, block_number, block_timestamp)
+                    .await?;
             }
             VaultEvent::BringLiquidity(_) => {
                 // BringLiquidity events represent internal vault operations (rebalancing)
                 // These don't directly affect user positions but provide valuable vault state info
             }
         }
+
+        Ok(())
+    }
+
+    async fn handle_report_event(
+        &self,
+        report: Box<ReportEvent>,
+        tx_hash: String,
+        block_number: u64,
+        block_timestamp: DateTime<Utc>,
+    ) -> Result<(), anyhow::Error> {
+        tracing::info!("[StarknetIndexer] 📊 Handling report event with hash: {tx_hash}");
+
+        // Check if report already exists to avoid duplicates
+        let tx_hash_check = tx_hash.clone();
+        let report_exists = self
+            .state
+            .db_pool
+            .interact_with_context(
+                format!("check if report exists: {tx_hash_check}"),
+                move |conn| VaultReport::exists_by_hash(&tx_hash_check, conn),
+            )
+            .await?;
+
+        if report_exists {
+            tracing::info!(
+                "[StarknetIndexer] ⏭️  Skipping duplicate report: {} (block: {})",
+                tx_hash,
+                block_number
+            );
+            return Ok(());
+        }
+
+        // Get underlying asset decimals for normalization
+        let vault_contract =
+            StarknetVaultContract::new(self.starknet_provider.clone(), self.vault_address);
+        let underlying_asset_decimals = Decimal::from(
+            vault_contract
+                .underlying_asset_decimals(Some(BlockId::Number(block_number)))
+                .await?,
+        );
+
+        // Normalize all decimal values
+        let decimals_divisor = dec!(10).powd(underlying_asset_decimals);
+        let new_epoch = report.new_epoch;
+        let new_handled_epoch_len = report.new_handled_epoch_len;
+        let total_supply = report.total_supply / decimals_divisor;
+        let total_aum = report.total_aum / decimals_divisor;
+        let management_fee_shares = report.management_fee_shares / decimals_divisor;
+        let performance_fee_shares = report.performance_fee_shares / decimals_divisor;
+
+        // Create new vault report record
+        let new_report = NewVaultReport {
+            tx_hash,
+            block_number: block_number
+                .try_into()
+                .expect("[StarknetIndexer] 🌯 Block number too large for i64"),
+            block_timestamp,
+            vault_id: self.vault_id.clone(),
+            new_epoch,
+            new_handled_epoch_len,
+            total_supply,
+            total_aum,
+            management_fee_shares,
+            performance_fee_shares,
+        };
+
+        self.state
+            .db_pool
+            .interact_with_context(
+                format!("create vault report for vault: {}", self.vault_id),
+                move |conn| VaultReport::create(&new_report, conn),
+            )
+            .await?;
+
+        tracing::info!(
+            "[StarknetIndexer] ✅ Report event processed: epoch={}, vault={}",
+            new_epoch,
+            self.vault_id
+        );
 
         Ok(())
     }
