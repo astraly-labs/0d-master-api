@@ -47,6 +47,7 @@ pub struct GetStatsDTO {
     pub tvl: String,
     pub tvl_usd: String,
     pub past_month_apr_pct: f64,
+    pub projected_apr_pct: f64,
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
