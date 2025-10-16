@@ -1,0 +1,10 @@
+target
+.git
+**/tests
+**/*.log
+node_modules
+.vscode
+.idea
+*.iml
+.env*
+datasets

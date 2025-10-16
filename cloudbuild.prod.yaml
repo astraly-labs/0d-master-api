@@ -1,25 +1,25 @@
+# cloudbuild.yaml
 timeout: 3600s
 
 steps:
-  - name: "gcr.io/cloud-builders/docker"
+  - name: 'gcr.io/cloud-builders/docker'
     id: docker-build
+    env: ['DOCKER_BUILDKIT=1']
     args:
-      [
-        "build",
-        "--tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:$TAG_NAME",
-        "--file=Dockerfile",
-        ".",
-      ]
+      - build
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:$TAG_NAME'
+      - '--cache-from=type=registry,ref=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:cache'
+      - '--cache-to=type=registry,ref=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:cache,mode=max'
+      - '.'
 
-  - name: "gcr.io/cloud-builders/docker"
+  - name: 'gcr.io/cloud-builders/docker'
     id: docker-push
     args:
-      [
-        "push",
-        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:$TAG_NAME",
-      ]
-    waitFor: ["docker-build"]
+      - push
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:$TAG_NAME'
+    waitFor: ['docker-build']
 
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: "E2_HIGHCPU_32"
+  machineType: 'E2_HIGHCPU_32'
