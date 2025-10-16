@@ -123,7 +123,7 @@ impl From<jaffar_sdk::types::NavLatestResponse> for NavLatestDTO {
             aum: nav.aum,
             var_since_prev_pct: nav.var_since_prev_pct,
             apr_since_prev_pct: nav.apr_since_prev_pct,
-            report_url: None
+            report_url: None,
         }
     }
 }
