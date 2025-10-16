@@ -153,17 +153,15 @@ impl From<jaffar_sdk::types::TimeseriesResponse> for TimeseriesResponseDTO {
 
 impl From<jaffar_sdk::types::CompositionPosition> for CompositionPosition {
     fn from(p: jaffar_sdk::types::CompositionPosition) -> Self {
-        CompositionPosition {
+        Self {
             platform: p.platform.clone(),
-            asset: p.symbol.clone(), // Use symbol as asset (SDK doesn't have separate asset field)
-            symbol: p.symbol,
+            debt_asset: p.debt_asset.clone(),
+            collateral_asset: p.collateral_asset.clone(),
             pct: p.pct,
             apy_est_pct: p.apy_est_pct,
-            icon: Some(p.icon),
         }
     }
 }
-
 impl From<jaffar_sdk::types::CompositionResponse> for CompositionDTO {
     fn from(comp: jaffar_sdk::types::CompositionResponse) -> Self {
         CompositionDTO {

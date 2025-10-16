@@ -20,11 +20,10 @@ pub struct AprPoint {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CompositionPosition {
     pub platform: String,
-    pub asset: String,
-    pub symbol: String,
+    pub debt_asset: String,
+    pub collateral_asset: String,
     pub pct: f64,
     pub apy_est_pct: f64,
-    pub icon: Option<String>,
 }
 
 /// APR basis enum
