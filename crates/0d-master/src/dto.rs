@@ -46,6 +46,7 @@ pub enum GroupBy {
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct GetStatsDTO {
     pub tvl: String,
+    pub tvl_usd: String,
     pub past_month_apr_pct: f64,
 }
 
@@ -55,7 +56,7 @@ pub struct NavLatestDTO {
     pub aum: String,
     pub var_since_prev_pct: f64,
     pub apr_since_prev_pct: f64,
-    pub report_url: String,
+    pub report_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]

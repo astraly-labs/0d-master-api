@@ -61,6 +61,7 @@ impl From<jaffar_sdk::types::GetStatsResponse> for GetStatsDTO {
     fn from(stats: jaffar_sdk::types::GetStatsResponse) -> Self {
         GetStatsDTO {
             tvl: stats.tvl,
+            tvl_usd: stats.tvl_as_usd,
             past_month_apr_pct: stats.past_month_apr_pct,
         }
     }
@@ -121,7 +122,7 @@ impl From<jaffar_sdk::types::NavLatestResponse> for NavLatestDTO {
             aum: nav.aum,
             var_since_prev_pct: nav.var_since_prev_pct,
             apr_since_prev_pct: nav.apr_since_prev_pct,
-            report_url: nav.report_url,
+            report_url: None
         }
     }
 }

@@ -56,10 +56,12 @@ pub(super) fn apr_basis_from_str(basis: &str) -> AprBasis {
 impl From<&vesu_sdk::types::VaultsControllerGetVaultsResponseItem> for GetStatsDTO {
     fn from(vault: &vesu_sdk::types::VaultsControllerGetVaultsResponseItem) -> Self {
         let tvl = vault.tvl.clone().unwrap_or_else(|| "0".to_string());
+        let tvl_usd = vault.tvl_usd.clone().unwrap_or_else(|| "0".to_string());
         let apr_pct = parse_decimal(vault.apr.as_deref());
 
         GetStatsDTO {
             tvl,
+            tvl_usd,
             past_month_apr_pct: apr_pct,
         }
     }
@@ -159,7 +161,7 @@ impl From<NavHistory> for Option<NavLatestDTO> {
                 .to_string(),
             var_since_prev_pct,
             apr_since_prev_pct,
-            report_url: String::new(),
+            report_url: None,
         })
     }
 }
