@@ -32,7 +32,7 @@ impl IndexerService {
 
     pub async fn run_forever(&self) -> anyhow::Result<()> {
         let mut supervisor = SupervisorBuilder::default()
-            .with_dead_tasks_threshold(Some(0.00)) // if any task is dead, stop the supervisor
+            .with_dead_tasks_threshold(Some(0.5)) // if any task is dead, stop the supervisor
             .with_base_restart_delay(Duration::from_millis(500))
             .with_max_restart_attempts(5)
             .with_task_being_stable_after(Duration::from_secs(120))
