@@ -48,7 +48,8 @@ impl SupervisedTask for StarknetIndexer {
 
         let (mut event_receiver, mut vault_handle) = vault_indexer.start().await?;
         tracing::info!(
-            "[StarknetIndexer] 🔌 Connected to the on-chain Vault({})! (from block {})",
+            "[Vault {}] 🔌 Connected to the on-chain Vault({})! (from block {})",
+            self.vault_id,
             self.vault_id,
             self.state.current_block
         );
@@ -62,7 +63,7 @@ impl SupervisedTask for StarknetIndexer {
                             (event_metadata.block_number, event_metadata.timestamp);
 
                             let block_timestamp = DateTime::from_timestamp_secs(block_timestamp).unwrap_or_else(|| {
-                                panic!("[StarknetIndexer] ❌ Invalid timestamp for block {block_number}")
+                                panic!("[Vault {}] ❌ Invalid timestamp for block {block_number}", self.vault_id)
                             });
 
                             let tx_hash = felt_to_hex_str(event_metadata.transaction_hash);
@@ -79,7 +80,7 @@ impl SupervisedTask for StarknetIndexer {
                         }
                         OutputEvent::Synced => {
                             self.state.set_indexer_state_synced(&self.vault_id).await?;
-                            tracing::info!("[StarknetIndexer] 🥳 Vault({}) reached the tip of the chain!", self.vault_id);
+                            tracing::info!("[Vault {}] 🥳 Vault({}) reached the tip of the chain!", self.vault_id, self.vault_id);
                         }
                         // NOTE: Never happens for now. See later when apibara upgrades?
                         OutputEvent::Finalized(_) | OutputEvent::Invalidated(_) => { }
@@ -254,7 +255,10 @@ impl StarknetIndexer {
         block_number: u64,
         block_timestamp: DateTime<Utc>,
     ) -> Result<(), anyhow::Error> {
-        tracing::info!("[StarknetIndexer] 💸 Handling redeem requested event with hash: {tx_hash}");
+        tracing::info!(
+            "[Vault {}] 💸 Handling redeem requested event with hash: {tx_hash}",
+            self.vault_id
+        );
 
         let user_address = felt_to_hex_str(redeem.owner);
         self.ensure_user_exists(user_address.clone()).await?;
@@ -290,7 +294,8 @@ impl StarknetIndexer {
 
         if tx_exists {
             tracing::info!(
-                "[StarknetIndexer] ⏭️  Skipping duplicate withdraw transaction: {} (block: {})",
+                "[Vault {}] ⏭️  Skipping duplicate withdraw transaction: {} (block: {})",
+                self.vault_id,
                 tx_hash,
                 block_number
             );
@@ -335,40 +340,40 @@ impl StarknetIndexer {
             .interact_with_context(
                 format!("update user position for redeem: user={user_address}, vault={vault_id}"),
                 move |conn| {
-                match UserPosition::find_by_user_and_vault(&user_address, &vault_id, conn) {
-                    Ok(position) => {
-                        // Reduce share balance for pending redemption
-                        let new_share_balance = position.share_balance - redeem_shares;
+                    match UserPosition::find_by_user_and_vault(&user_address, &vault_id, conn) {
+                        Ok(position) => {
+                            // Reduce share balance for pending redemption
+                            let new_share_balance = position.share_balance - redeem_shares;
 
-                        // Ensure we don't go negative
-                        let new_share_balance = if new_share_balance < Decimal::ZERO {
-                            Decimal::ZERO
-                        } else {
-                            new_share_balance
-                        };
+                            // Ensure we don't go negative
+                            let new_share_balance = if new_share_balance < Decimal::ZERO {
+                                Decimal::ZERO
+                            } else {
+                                new_share_balance
+                            };
 
-                        let updates = UserPositionUpdate {
-                            share_balance: Some(new_share_balance),
-                            cost_basis: None,
-                            last_activity_at: Some(block_timestamp),
-                            updated_at: Some(Utc::now()),
-                        };
+                            let updates = UserPositionUpdate {
+                                share_balance: Some(new_share_balance),
+                                cost_basis: None,
+                                last_activity_at: Some(block_timestamp),
+                                updated_at: Some(Utc::now()),
+                            };
 
-                        position.update(&updates, conn).map(|_| ())
+                            position.update(&updates, conn).map(|_| ())
+                        }
+                        Err(diesel::result::Error::NotFound) => {
+                            tracing::warn!(
+                                "[Vault {}] ⏭️ Redeem requested for non-existent position: user={}",
+                                vault_id,
+                                user_address
+                            );
+                            Ok(())
+                        }
+                        Err(e) => Err(e),
                     }
-                    Err(diesel::result::Error::NotFound) => {
-                        tracing::warn!(
-                            "[StarknetIndexer] ⏭️ Redeem requested for non-existent position: user={}, vault={}",
-                            user_address,
-                            vault_id
-                        );
-                        Ok(())
-                    }
-                    Err(e) => Err(e),
-                }
-            },
-        )
-        .await?;
+                },
+            )
+            .await?;
 
         Ok(())
     }

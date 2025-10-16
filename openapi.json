@@ -7,7 +7,7 @@
       "name": "MIT",
       "identifier": "MIT"
     },
-    "version": "0.1.6"
+    "version": "0.1.8"
   },
   "servers": [
     {
@@ -1173,8 +1173,8 @@
         "description": "Composition position data",
         "required": [
           "platform",
-          "asset",
-          "symbol",
+          "debt_asset",
+          "collateral_asset",
           "pct",
           "apy_est_pct"
         ],
@@ -1183,23 +1183,17 @@
             "type": "number",
             "format": "double"
           },
-          "asset": {
+          "collateral_asset": {
             "type": "string"
           },
-          "icon": {
-            "type": [
-              "string",
-              "null"
-            ]
+          "debt_asset": {
+            "type": "string"
           },
           "pct": {
             "type": "number",
             "format": "double"
           },
           "platform": {
-            "type": "string"
-          },
-          "symbol": {
             "type": "string"
           }
         }
@@ -1318,14 +1312,23 @@
         "type": "object",
         "required": [
           "tvl",
-          "past_month_apr_pct"
+          "tvl_usd",
+          "past_month_apr_pct",
+          "projected_apr_pct"
         ],
         "properties": {
           "past_month_apr_pct": {
             "type": "number",
             "format": "double"
           },
+          "projected_apr_pct": {
+            "type": "number",
+            "format": "double"
+          },
           "tvl": {
+            "type": "string"
+          },
+          "tvl_usd": {
             "type": "string"
           }
         }
@@ -1524,8 +1527,7 @@
           "date",
           "aum",
           "var_since_prev_pct",
-          "apr_since_prev_pct",
-          "report_url"
+          "apr_since_prev_pct"
         ],
         "properties": {
           "apr_since_prev_pct": {
@@ -1539,7 +1541,10 @@
             "type": "string"
           },
           "report_url": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "var_since_prev_pct": {
             "type": "number",

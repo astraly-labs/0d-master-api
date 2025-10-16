@@ -61,7 +61,9 @@ impl From<jaffar_sdk::types::GetStatsResponse> for GetStatsDTO {
     fn from(stats: jaffar_sdk::types::GetStatsResponse) -> Self {
         GetStatsDTO {
             tvl: stats.tvl,
+            tvl_usd: stats.tvl_as_usd,
             past_month_apr_pct: stats.past_month_apr_pct,
+            projected_apr_pct: stats.projected_apr_pct,
         }
     }
 }
@@ -121,7 +123,7 @@ impl From<jaffar_sdk::types::NavLatestResponse> for NavLatestDTO {
             aum: nav.aum,
             var_since_prev_pct: nav.var_since_prev_pct,
             apr_since_prev_pct: nav.apr_since_prev_pct,
-            report_url: nav.report_url,
+            report_url: None,
         }
     }
 }
@@ -152,17 +154,15 @@ impl From<jaffar_sdk::types::TimeseriesResponse> for TimeseriesResponseDTO {
 
 impl From<jaffar_sdk::types::CompositionPosition> for CompositionPosition {
     fn from(p: jaffar_sdk::types::CompositionPosition) -> Self {
-        CompositionPosition {
+        Self {
             platform: p.platform.clone(),
-            asset: p.symbol.clone(), // Use symbol as asset (SDK doesn't have separate asset field)
-            symbol: p.symbol,
+            debt_asset: p.debt_asset.clone(),
+            collateral_asset: p.collateral_asset.clone(),
             pct: p.pct,
             apy_est_pct: p.apy_est_pct,
-            icon: Some(p.icon),
         }
     }
 }
-
 impl From<jaffar_sdk::types::CompositionResponse> for CompositionDTO {
     fn from(comp: jaffar_sdk::types::CompositionResponse) -> Self {
         CompositionDTO {
