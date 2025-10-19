@@ -63,7 +63,7 @@ impl From<&vesu_sdk::types::VaultsControllerGetVaultsResponseItem> for GetStatsD
             tvl,
             tvl_usd,
             past_month_apr_pct: apr_pct,
-            projected_apr_pct: apr_pct, // TODO: add projected apr pct
+            projected_apr_pct: 6.0,
         }
     }
 }

@@ -63,7 +63,7 @@ impl From<jaffar_sdk::types::GetStatsResponse> for GetStatsDTO {
             tvl: stats.tvl,
             tvl_usd: stats.tvl_as_usd,
             past_month_apr_pct: stats.past_month_apr_pct,
-            projected_apr_pct: stats.projected_apr_pct,
+            projected_apr_pct: 16.2,
         }
     }
 }
