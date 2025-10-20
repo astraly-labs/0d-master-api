@@ -189,4 +189,7 @@ pub struct VaultInfoResponse {
 
     /// Current share price in USD
     pub share_price_in_usd: String,
+
+    /// Decimals of the underlying asset (same as vault token)
+    pub decimals: u8
 }

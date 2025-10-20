@@ -187,6 +187,7 @@ impl From<jaffar_sdk::types::VaultInfoResponse> for VaultInfoResponse {
             aum: info.aum,
             buffer: info.buffer,
             share_price_in_usd: info.share_price_in_usd,
+            decimals: 6, // TODO: not hardcode once jaffar api has been updated
         }
     }
 }

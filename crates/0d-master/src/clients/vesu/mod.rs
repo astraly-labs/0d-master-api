@@ -224,7 +224,7 @@ impl VaultMasterClient for VesuClient {
 
     async fn get_vault_info(&self) -> Result<VaultInfoResponse, MasterApiError> {
         let vault = self.get_vault().await?;
-        
+
         Ok(VaultInfoResponse {
             current_epoch: "0".to_string(),
             underlying_currency: vault.underlying_symbol.ok_or_else(|| {
@@ -241,6 +241,9 @@ impl VaultMasterClient for VesuClient {
             share_price_in_usd: vault
                 .share_price
                 .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("Share price not found")))?,
+            decimals: vault
+                .decimals
+                .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("Decimals not found")))? as u8,
         })
     }
 }
