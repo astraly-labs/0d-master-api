@@ -1,6 +1,7 @@
 mod types;
 
 use crate::{
+    CapItemDTO,
     dto::{
         AprSeriesDTO, AprSummaryDTO, CapsDTO, CompositionDTO, CompositionSeriesDTO, GetStatsDTO,
         KpisDTO, LiquidityDTO, LiquiditySimulateResponseDTO, NavLatestDTO, SlippageCurveDTO,
@@ -175,9 +176,27 @@ impl VaultMasterClient for VesuClient {
     }
 
     async fn get_vault_caps(&self) -> Result<CapsDTO, MasterApiError> {
-        Err(MasterApiError::AnyhowError(anyhow!(
-            "Caps not supported by Vesu API"
-        )))
+        let vault = self.get_vault().await?;
+        Ok(CapsDTO {
+            items: vec![CapItemDTO {
+                name: "deposit".to_string(),
+                current: vault
+                    .tvl
+                    .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("TVL not found")))?
+                    .parse::<f64>()
+                    .map_err(|e| MasterApiError::AnyhowError(anyhow!("Invalid TVL: {}", e)))?,
+                limit: vault
+                    .deposit_limit
+                    .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("Deposit limit not found")))?
+                    .parse::<f64>()
+                    .map_err(|e| {
+                        MasterApiError::AnyhowError(anyhow!("Invalid deposit limit: {}", e))
+                    })?,
+                unit: vault.underlying_symbol.ok_or_else(|| {
+                    MasterApiError::AnyhowError(anyhow!("Underlying symbol not found"))
+                })?,
+            }],
+        })
     }
 
     async fn get_vault_kpis(&self, _timeframe: &str) -> Result<KpisDTO, MasterApiError> {
