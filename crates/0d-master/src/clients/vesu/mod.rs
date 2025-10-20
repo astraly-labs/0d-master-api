@@ -223,13 +223,24 @@ impl VaultMasterClient for VesuClient {
     }
 
     async fn get_vault_info(&self) -> Result<VaultInfoResponse, MasterApiError> {
-        Err(MasterApiError::AnyhowError(anyhow!(
-            "Vault info not supported by Vesu API"
-        )))
-    }
-
-    async fn get_vault_share_price(&self) -> Result<String, MasterApiError> {
         let vault = self.get_vault().await?;
-        Ok(vault.share_price.unwrap_or_else(|| "0".to_string()))
+        
+        Ok(VaultInfoResponse {
+            current_epoch: "0".to_string(),
+            underlying_currency: vault.underlying_symbol.ok_or_else(|| {
+                MasterApiError::AnyhowError(anyhow!("Underlying symbol not found"))
+            })?,
+            underlying_currency_address: vault.underlying_asset.ok_or_else(|| {
+                MasterApiError::AnyhowError(anyhow!("Underlying asset not found"))
+            })?,
+            pending_withdrawals_assets: "0".to_string(),
+            aum: vault
+                .tvl
+                .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("TVL not found")))?,
+            buffer: "0".to_string(),
+            share_price_in_usd: vault
+                .share_price
+                .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("Share price not found")))?,
+        })
     }
 }

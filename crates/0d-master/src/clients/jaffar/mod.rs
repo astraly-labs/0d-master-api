@@ -148,13 +148,4 @@ impl VaultMasterClient for JaffarClient {
             .map_err(|e| MasterApiError::JaffarSdkError(e.to_string()))?;
         Ok(response.into_inner().into())
     }
-
-    async fn get_vault_share_price(&self) -> Result<String, MasterApiError> {
-        let response = self
-            .client
-            .get_vault_info()
-            .await
-            .map_err(|e| MasterApiError::JaffarSdkError(e.to_string()))?;
-        Ok(response.into_inner().share_price_in_usd)
-    }
 }

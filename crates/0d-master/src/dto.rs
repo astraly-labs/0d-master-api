@@ -175,6 +175,9 @@ pub struct VaultInfoResponse {
     /// The underlying currency ticker (e.g., "USDC", "USDT")
     pub underlying_currency: String,
 
+    /// The underlying currency address
+    pub underlying_currency_address: String,
+
     /// Total assets required for pending withdrawals (sum of all epochs)
     pub pending_withdrawals_assets: String,
 

@@ -335,11 +335,11 @@ impl KpiService {
         let share_price_str = if Self::is_alternative_vault(&vault.id) {
             // Use Vesu client for vaults 2-6
             let client = VesuClient::new(&vault.api_endpoint, &vault.contract_address)?;
-            client.get_vault_share_price().await?
+            client.get_vault_info().await?.share_price_in_usd
         } else {
             // Use Jaffar client for vault 1
             let client = JaffarClient::new(&vault.api_endpoint);
-            client.get_vault_share_price().await?
+            client.get_vault_info().await?.share_price_in_usd
         };
 
         share_price_str

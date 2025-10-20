@@ -2054,6 +2054,7 @@
         "required": [
           "current_epoch",
           "underlying_currency",
+          "underlying_currency_address",
           "pending_withdrawals_assets",
           "aum",
           "buffer",
@@ -2083,6 +2084,10 @@
           "underlying_currency": {
             "type": "string",
             "description": "The underlying currency ticker (e.g., \"USDC\", \"USDT\")"
+          },
+          "underlying_currency_address": {
+            "type": "string",
+            "description": "The underlying currency address"
           }
         }
       },

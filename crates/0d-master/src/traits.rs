@@ -48,6 +48,4 @@ pub trait VaultMasterClient: Send + Sync {
     ) -> Result<LiquiditySimulateResponseDTO, MasterApiError>;
 
     async fn get_vault_info(&self) -> Result<VaultInfoResponse, MasterApiError>;
-
-    async fn get_vault_share_price(&self) -> Result<String, MasterApiError>;
 }

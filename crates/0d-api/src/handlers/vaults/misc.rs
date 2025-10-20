@@ -96,6 +96,7 @@ pub async fn get_vault_info(
     let info_dto = VaultInfoDTO {
         current_epoch: vault_info.current_epoch,
         underlying_currency: vault_info.underlying_currency,
+        underlying_currency_address: vault_info.underlying_currency_address,
         pending_withdrawals_assets: vault_info.pending_withdrawals_assets,
         aum: vault_info.aum,
         buffer: vault_info.buffer,

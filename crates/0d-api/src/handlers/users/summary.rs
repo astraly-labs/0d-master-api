@@ -69,11 +69,7 @@ pub async fn get_user_position_summary(
 
     // Fetch current share price from vault API
     let client = JaffarClient::new(&vault.api_endpoint);
-    let share_price_str = client.get_vault_share_price().await.map_err(|e| {
-        tracing::error!("Failed to fetch vault share price: {e}");
-        ApiError::InternalServerError
-    })?;
-
+    let share_price_str = client.get_vault_info().await?.share_price_in_usd;
     let share_price = share_price_str.parse::<Decimal>().map_err(|e| {
         tracing::error!("Failed to parse share price '{share_price_str}': {e}");
         ApiError::InternalServerError
