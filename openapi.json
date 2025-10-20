@@ -7,7 +7,7 @@
       "name": "MIT",
       "identifier": "MIT"
     },
-    "version": "0.1.11"
+    "version": "0.1.12"
   },
   "servers": [
     {
@@ -2058,7 +2058,8 @@
           "pending_withdrawals_assets",
           "aum",
           "buffer",
-          "share_price_in_usd"
+          "share_price_in_usd",
+          "decimals"
         ],
         "properties": {
           "aum": {
@@ -2072,6 +2073,12 @@
           "current_epoch": {
             "type": "string",
             "description": "Current epoch number"
+          },
+          "decimals": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Decimals of underlying asset",
+            "minimum": 0
           },
           "pending_withdrawals_assets": {
             "type": "string",

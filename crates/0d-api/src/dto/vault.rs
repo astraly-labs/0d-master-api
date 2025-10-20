@@ -92,30 +92,6 @@ pub struct LiquiditySimulateRequest {
     pub amount: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct VaultInfoDTO {
-    /// Current epoch number
-    pub current_epoch: String,
-
-    /// The underlying currency ticker (e.g., "USDC", "USDT")
-    pub underlying_currency: String,
-
-    /// The underlying currency address
-    pub underlying_currency_address: String,
-
-    /// Total assets required for pending withdrawals (sum of all epochs)
-    pub pending_withdrawals_assets: String,
-
-    /// Assets under management (AUM) in underlying currency
-    pub aum: String,
-
-    /// Current buffer amount in underlying currency
-    pub buffer: String,
-
-    /// Current share price in USD
-    pub share_price_in_usd: String,
-}
-
 impl From<zerod_db::models::Vault> for Vault {
     fn from(vault: zerod_db::models::Vault) -> Self {
         Self {

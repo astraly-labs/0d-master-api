@@ -5,7 +5,7 @@ use crate::{
     dto::{
         AprSeriesDTO, AprSummaryDTO, CapsDTO, CompositionDTO, CompositionSeriesDTO, GetStatsDTO,
         KpisDTO, LiquidityDTO, LiquiditySimulateResponseDTO, NavLatestDTO, SlippageCurveDTO,
-        TimeseriesResponseDTO, VaultInfoResponse,
+        TimeseriesResponseDTO, VaultInfoDTO,
     },
     error::MasterApiError,
     traits::VaultMasterClient,
@@ -140,7 +140,7 @@ impl VaultMasterClient for JaffarClient {
         ))
     }
 
-    async fn get_vault_info(&self) -> Result<VaultInfoResponse, MasterApiError> {
+    async fn get_vault_info(&self) -> Result<VaultInfoDTO, MasterApiError> {
         let response = self
             .client
             .get_vault_info()

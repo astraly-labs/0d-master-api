@@ -4,7 +4,7 @@ use crate::{
     dto::{
         AprSeriesDTO, AprSummaryDTO, CapsDTO, CompositionDTO, CompositionSeriesDTO, GetStatsDTO,
         KpisDTO, LiquidityDTO, LiquiditySimulateResponseDTO, NavLatestDTO, SlippageCurveDTO,
-        TimeseriesResponseDTO, VaultInfoResponse,
+        TimeseriesResponseDTO, VaultInfoDTO,
     },
     error::MasterApiError,
     traits::VaultMasterClient,
@@ -222,10 +222,10 @@ impl VaultMasterClient for VesuClient {
         )))
     }
 
-    async fn get_vault_info(&self) -> Result<VaultInfoResponse, MasterApiError> {
+    async fn get_vault_info(&self) -> Result<VaultInfoDTO, MasterApiError> {
         let vault = self.get_vault().await?;
 
-        Ok(VaultInfoResponse {
+        Ok(VaultInfoDTO {
             current_epoch: "0".to_string(),
             underlying_currency: vault.underlying_symbol.ok_or_else(|| {
                 MasterApiError::AnyhowError(anyhow!("Underlying symbol not found"))
@@ -243,7 +243,8 @@ impl VaultMasterClient for VesuClient {
                 .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("Share price not found")))?,
             decimals: vault
                 .decimals
-                .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("Decimals not found")))? as u8,
+                .ok_or_else(|| MasterApiError::AnyhowError(anyhow!("Decimals not found")))?
+                as u8,
         })
     }
 }

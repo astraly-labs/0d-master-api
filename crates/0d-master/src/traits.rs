@@ -2,7 +2,7 @@ use crate::{
     dto::{
         AprSeriesDTO, AprSummaryDTO, CapsDTO, CompositionDTO, CompositionSeriesDTO, GetStatsDTO,
         KpisDTO, LiquidityDTO, LiquiditySimulateResponseDTO, NavLatestDTO, SlippageCurveDTO,
-        TimeseriesResponseDTO, VaultInfoResponse,
+        TimeseriesResponseDTO, VaultInfoDTO,
     },
     error::MasterApiError,
 };
@@ -47,5 +47,5 @@ pub trait VaultMasterClient: Send + Sync {
         amount: &str,
     ) -> Result<LiquiditySimulateResponseDTO, MasterApiError>;
 
-    async fn get_vault_info(&self) -> Result<VaultInfoResponse, MasterApiError>;
+    async fn get_vault_info(&self) -> Result<VaultInfoDTO, MasterApiError>;
 }

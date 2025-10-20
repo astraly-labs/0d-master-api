@@ -1,9 +1,6 @@
-use crate::{
-    VaultInfoResponse,
-    dto::{
-        AprBasis, AprPoint, AprSeriesDTO, AprSummaryDTO, CompositionDTO, CompositionPosition,
-        GetStatsDTO, NavLatestDTO, TimeseriesPoint, TimeseriesResponseDTO,
-    },
+use crate::dto::{
+    AprBasis, AprPoint, AprSeriesDTO, AprSummaryDTO, CompositionDTO, CompositionPosition,
+    GetStatsDTO, NavLatestDTO, TimeseriesPoint, TimeseriesResponseDTO, VaultInfoDTO,
 };
 
 // ============================================================================
@@ -176,9 +173,9 @@ impl From<jaffar_sdk::types::CompositionResponse> for CompositionDTO {
 // Info conversions
 // ============================================================================
 
-impl From<jaffar_sdk::types::VaultInfoResponse> for VaultInfoResponse {
+impl From<jaffar_sdk::types::VaultInfoResponse> for VaultInfoDTO {
     fn from(info: jaffar_sdk::types::VaultInfoResponse) -> Self {
-        VaultInfoResponse {
+        VaultInfoDTO {
             current_epoch: info.current_epoch,
             underlying_currency: info.underlying_currency,
             underlying_currency_address:

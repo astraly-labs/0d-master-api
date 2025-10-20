@@ -4,11 +4,11 @@ use axum::{
     response::IntoResponse,
 };
 
-use zerod_master::{CapsDTO, NavLatestDTO};
+use zerod_master::{CapsDTO, NavLatestDTO, VaultInfoDTO};
 
 use crate::{
     AppState,
-    dto::{ApiResponse, VaultInfoDTO},
+    dto::ApiResponse,
     errors::ApiError,
     helpers::{call_vault_backend, fetch_vault_with_client},
 };
@@ -92,16 +92,5 @@ pub async fn get_vault_info(
         })
         .await?;
 
-    // Convert the internal VaultInfoResponse to the public DTO
-    let info_dto = VaultInfoDTO {
-        current_epoch: vault_info.current_epoch,
-        underlying_currency: vault_info.underlying_currency,
-        underlying_currency_address: vault_info.underlying_currency_address,
-        pending_withdrawals_assets: vault_info.pending_withdrawals_assets,
-        aum: vault_info.aum,
-        buffer: vault_info.buffer,
-        share_price_in_usd: vault_info.share_price_in_usd,
-    };
-
-    Ok(Json(ApiResponse::ok(info_dto)))
+    Ok(Json(ApiResponse::ok(vault_info)))
 }

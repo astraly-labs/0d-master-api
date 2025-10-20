@@ -166,9 +166,8 @@ pub struct AprSummaryDTO {
     pub apr_basis: AprBasis,
 }
 
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-pub struct VaultInfoResponse {
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct VaultInfoDTO {
     /// Current epoch number
     pub current_epoch: String,
 
@@ -190,6 +189,6 @@ pub struct VaultInfoResponse {
     /// Current share price in USD
     pub share_price_in_usd: String,
 
-    /// Decimals of the underlying asset (same as vault token)
-    pub decimals: u8
+    /// Decimals of underlying asset
+    pub decimals: u8,
 }
