@@ -6287,6 +6287,7 @@ dependencies = [
  "diesel",
  "dotenvy",
  "futures",
+ "governor",
  "pragma-common 0.4.1",
  "reqwest 0.12.23",
  "rust_decimal",

@@ -3,9 +3,12 @@ pub mod dto;
 pub mod errors;
 pub mod handlers;
 pub mod helpers;
+pub mod middleware;
 pub mod router;
 
+use std::collections::HashSet;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use anyhow::Context;
 use axum::http::{HeaderValue, Method};
@@ -13,12 +16,14 @@ use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer}
 use deadpool_diesel::postgres::Pool;
 use std::{env, time::Duration};
 use tokio::net::TcpListener;
-use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
+use tower_governor::governor::GovernorConfigBuilder;
+use tower_governor::key_extractor::SmartIpKeyExtractor;
 use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 
 use pragma_common::services::{Service, ServiceRunner};
 
 use docs::ApiDoc;
+use middleware::RateLimitConfig;
 use router::api_router;
 
 #[derive(Clone)]
@@ -130,6 +135,25 @@ impl Service for ApiService {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(60);
 
+            // Parse whitelist domains from env
+            let whitelist_domains: HashSet<String> = env::var("RATE_LIMIT_WHITELIST_DOMAINS")
+                .ok()
+                .map(|domains| {
+                    domains
+                        .split(',')
+                        .map(|d| d.trim().to_lowercase())
+                        .filter(|d| !d.is_empty())
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            if !whitelist_domains.is_empty() {
+                tracing::info!(
+                    whitelist = ?whitelist_domains,
+                    "Rate limiting whitelist configured"
+                );
+            }
+
             #[allow(clippy::default_constructed_unit_structs)]
             let app = {
                 let base = api_router::<ApiDoc>(state.clone())
@@ -140,24 +164,26 @@ impl Service for ApiService {
                     .layer(OtelInResponseLayer::default());
 
                 let base = if limiter_enabled {
-                    // Configure rate limiting from env and expose x-ratelimit headers
+                    // Configure rate limiting from env
                     let governor_conf = GovernorConfigBuilder::default()
                         .per_second(per_second)
                         .burst_size(burst_size)
-                        .use_headers()
+                        .key_extractor(SmartIpKeyExtractor)
                         .finish()
                         .expect("failed to build governor config");
 
+                    let limiter = governor_conf.limiter().clone();
+
                     // Periodic cleanup of the limiter's internal storage, with graceful shutdown.
-                    let governor_limiter = governor_conf.limiter().clone();
+                    let limiter_cleanup = limiter.clone();
                     let cancel_token = ctx.token.clone();
                     tokio::spawn(async move {
                         let mut ticker = tokio::time::interval(Duration::from_secs(cleanup_secs));
                         loop {
                             tokio::select! {
                                 _ = ticker.tick() => {
-                                    tracing::debug!("rate limiting storage size: {}", governor_limiter.len());
-                                    governor_limiter.retain_recent();
+                                    tracing::debug!("rate limiting storage size: {}", limiter_cleanup.len());
+                                    limiter_cleanup.retain_recent();
                                 }
                                 () = cancel_token.cancelled() => {
                                     tracing::debug!("rate limiter cleanup task shutting down");
@@ -167,7 +193,17 @@ impl Service for ApiService {
                         }
                     });
 
-                    base.layer(GovernorLayer::new(governor_conf))
+                    // Create rate limit config with whitelist
+                    let rate_limit_config = RateLimitConfig {
+                        limiter,
+                        whitelist_domains: Arc::new(whitelist_domains),
+                    };
+
+                    // Apply custom rate limiting middleware
+                    base.layer(axum::middleware::from_fn(move |req, next| {
+                        let config = rate_limit_config.clone();
+                        middleware::rate_limit_middleware(config, req, next)
+                    }))
                 } else {
                     tracing::info!("rate limiter disabled via env");
                     base
