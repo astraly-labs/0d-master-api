@@ -45,3 +45,4 @@ rust_decimal.workspace = true
 axum-tracing-opentelemetry.workspace = true
 reqwest.workspace = true
 tower_governor.workspace = true
+governor.workspace = true

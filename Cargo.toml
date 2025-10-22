@@ -109,7 +109,7 @@ serde_json = "1.0"
 thiserror = "2"
 tokio = { version = "^1.43.0", features = ["full"] }
 tokio-util = "0.7.13"
-tower-http = { version = "0.5.2", features = ["fs", "trace", "cors"] }
+tower-http = { version = "0.5.2", features = ["fs", "trace", "cors", "timeout"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.4", features = ["fast-rng", "v4", "serde"] }
@@ -122,6 +122,7 @@ reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
 ] }
 tower_governor = { version = "0.8.0", features = ["axum", "tracing"] }
+governor = "0.10.1"
 rust_decimal = { version = "1.35", features = [
     "db-diesel-postgres",
     "serde",
