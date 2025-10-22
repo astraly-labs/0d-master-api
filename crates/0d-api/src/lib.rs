@@ -154,6 +154,17 @@ impl Service for ApiService {
                 );
             }
 
+            // Parse request timeout from env
+            let timeout_secs: u64 = env::var("REQUEST_TIMEOUT_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(30);
+
+            tracing::info!(
+                timeout_secs = timeout_secs,
+                "Request timeout configured"
+            );
+
             #[allow(clippy::default_constructed_unit_structs)]
             let app = {
                 let base = api_router::<ApiDoc>(state.clone())
@@ -208,6 +219,9 @@ impl Service for ApiService {
                     tracing::info!("rate limiter disabled via env");
                     base
                 };
+
+                // Apply timeout middleware
+                let base = base.layer(middleware::TimeoutLayer::new(Duration::from_secs(timeout_secs)));
 
                 base.layer(cors_layer_from_env())
             };

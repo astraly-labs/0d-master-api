@@ -11,6 +11,9 @@ use std::sync::Arc;
 use tower_governor::governor::SharedRateLimiter;
 use tower_governor::key_extractor::{KeyExtractor, SmartIpKeyExtractor};
 
+// Re-export timeout layer for use in lib.rs
+pub use tower_http::timeout::TimeoutLayer;
+
 pub struct RateLimitConfig<K, M>
 where
     K: std::hash::Hash + Eq + Clone,

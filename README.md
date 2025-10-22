@@ -9,6 +9,9 @@ Pragma Template is a template for creating a new service using axum and diesel. 
 - **Database Integration**: Uses PostgreSQL with Diesel ORM and connection pooling
 - **API Documentation**: Auto-generated OpenAPI documentation via Utoipa
 - **Observability**: Integrated with OpenTelemetry for tracing and monitoring
+- **Rate Limiting**: IP-based rate limiting with domain whitelist support
+- **Request Timeout**: Configurable timeout middleware to prevent resource exhaustion
+- **Security**: Built-in CORS configuration and middleware architecture
 - **Containerization**: Docker ready with multi-stage builds for minimal image size
 - **Development Tools**: Docker Compose for local development environment
 - **CI/CD**: GitHub Actions workflows for automated testing and deployments
@@ -96,11 +99,42 @@ docker run -p 3000:3000 --env-file .env 0d-bin
 
 The service is configured via environment variables:
 
+### Core Configuration
 - `DATABASE_URL`: PostgreSQL connection string
 - `DATABASE_MAX_CONN`: Maximum database connections in the pool
 - `API_PORT`: Port for the API server
 - `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed browser origins (`http://localhost:3000,https://app.0d.finance` is a safe starting point; unset to fall back to permissive mode)
 - `OTEL_COLLECTOR_ENDPOINT`: OpenTelemetry collector endpoint for tracing
+
+### Rate Limiting Configuration
+- `RATE_LIMIT_ENABLED`: Enable/disable rate limiting (default: `true`)
+- `RATE_LIMIT_PER_SECOND`: Number of requests allowed per second (default: `2`)
+- `RATE_LIMIT_BURST_SIZE`: Burst capacity for rate limiting (default: `5`)
+- `RATE_LIMIT_CLEANUP_INTERVAL_SECS`: Cleanup interval for rate limiter storage (default: `60`)
+- `RATE_LIMIT_WHITELIST_DOMAINS`: Comma-separated list of domains to bypass rate limiting (e.g., `trusted-domain.com,api.partner.com`)
+
+### Request Timeout Configuration
+- `REQUEST_TIMEOUT_SECS`: Request timeout in seconds (default: `30`)
+
+## 🛡️ Middleware Architecture
+
+The API implements a layered middleware architecture for security and performance:
+
+### Rate Limiting
+- **IP-based rate limiting** using `tower_governor`
+- Configurable requests per second and burst capacity
+- **Domain whitelist support**: Bypass rate limiting for trusted domains by checking Origin/Referer headers
+- Automatic cleanup of internal storage to prevent memory leaks
+
+### Request Timeout
+- Configurable timeout for all requests to prevent resource exhaustion
+- Returns `408 Request Timeout` when exceeded
+
+### Middleware Order (innermost to outermost)
+1. **OpenTelemetry tracing** - Distributed tracing and observability
+2. **Rate limiting** - Request throttling with domain whitelist
+3. **Timeout** - Request timeout enforcement
+4. **CORS** - Cross-origin resource sharing
 
 ## 📚 API Documentation
 
@@ -163,7 +197,8 @@ To complete this template you can:
 - **Testing**: Maintain high test coverage using codecov and nextes.st
 - **Documentation**: Keep API documentation up to date
 - **Error Handling**: Implement proper error handling and user feedback
-- **Rate Limiting**: Consider implementing rate limiting to prevent abuse
+- **Rate Limiting**: Built-in rate limiting is enabled by default to prevent abuse. Configure via environment variables to adjust limits or whitelist trusted domains
+- **Request Timeouts**: Configure appropriate timeout values based on your use case to prevent long-running requests from blocking resources
 - **Audit Logging**: Add detailed audit logging for security events
 
 ## 🤝 Contributing
