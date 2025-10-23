@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use chrono::{DateTime, Utc};
 use evian::contracts::starknet::vault::StarknetVaultContract;
 use evian::contracts::starknet::vault::data::indexer::events::{
-    DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, VaultAddress, VaultEvent,
+    DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, VaultAddress, VaultEvent, VaultProxyAddress
 };
 use evian::{
     contracts::starknet::vault::StarknetVaultIndexer, utils::indexer::handler::OutputEvent,
@@ -26,6 +26,7 @@ use crate::vaults::state::VaultState;
 pub struct StarknetIndexer {
     pub apibara_api_key: String,
     pub vault_address: Felt,
+    pub proxy_address: Option<Felt>,
     pub vault_id: String,
     pub starknet_provider: FallbackProvider,
     pub state: VaultState,
@@ -37,9 +38,14 @@ impl SupervisedTask for StarknetIndexer {
         // Load the last processed block from the database
         self.state.load_last_processed_block(&self.vault_id).await?;
 
+        let target_proxies = self.proxy_address
+            .map(|addr| HashSet::from([VaultProxyAddress(addr)]))
+            .unwrap_or(HashSet::new());
+                
         let vault_indexer = StarknetVaultIndexer::new(
             self.apibara_api_key.clone(),
             HashSet::from([VaultAddress(self.vault_address)]),
+            target_proxies,
             self.state.current_block,
         );
 
@@ -192,6 +198,7 @@ impl StarknetIndexer {
             type_: TransactionType::Deposit.as_str().to_string(),
             status: TransactionStatus::Confirmed.as_str().to_string(),
             amount: deposit_assets,
+            partner_id: deposit.partner_id.map(felt_to_hex_str),
             shares_amount: Some(deposit_shares),
             share_price,
             gas_fee: None,
@@ -314,6 +321,7 @@ impl StarknetIndexer {
             type_: TransactionType::Withdraw.as_str().to_string(),
             status: TransactionStatus::Pending.as_str().to_string(),
             amount: redeem_assets,
+            partner_id: None,
             shares_amount: Some(redeem_shares),
             share_price,
             gas_fee: None,

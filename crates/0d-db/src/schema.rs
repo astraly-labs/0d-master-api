@@ -106,6 +106,8 @@ diesel::table! {
         #[max_length = 20]
         status -> Varchar,
         amount -> Numeric,
+        #[max_length = 100]
+        partner_id -> Nullable<Varchar>,
         shares_amount -> Nullable<Numeric>,
         share_price -> Nullable<Numeric>,
         gas_fee -> Nullable<Numeric>,
@@ -146,6 +148,8 @@ diesel::table! {
         inception_date -> Nullable<Date>,
         #[max_length = 100]
         contract_address -> Varchar,
+        #[max_length = 100]
+        proxy_address -> Nullable<Varchar>,
         mgmt_fee_bps -> Nullable<Int4>,
         perf_fee_bps -> Int4,
         strategy_brief -> Nullable<Text>,
