@@ -3,7 +3,8 @@ use std::collections::HashSet;
 use chrono::{DateTime, Utc};
 use evian::contracts::starknet::vault::StarknetVaultContract;
 use evian::contracts::starknet::vault::data::indexer::events::{
-    DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, VaultAddress, VaultEvent, VaultProxyAddress
+    DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, VaultAddress, VaultEvent,
+    VaultProxyAddress,
 };
 use evian::{
     contracts::starknet::vault::StarknetVaultIndexer, utils::indexer::handler::OutputEvent,
@@ -16,7 +17,10 @@ use zerod_db::ZerodPool;
 use zerod_db::models::{
     user::User,
     user_position::{NewUserPosition, UserPosition, UserPositionUpdate},
-    user_transaction::{NewUserTransaction, TransactionStatus, TransactionType, UserTransaction},
+    user_transaction::{
+        NewUserTransaction, TransactionStatus, TransactionType, UserTransaction,
+        UserTransactionUpdate,
+    },
 };
 
 use crate::vaults::helpers::felt_to_hex_str;
@@ -38,10 +42,11 @@ impl SupervisedTask for StarknetIndexer {
         // Load the last processed block from the database
         self.state.load_last_processed_block(&self.vault_id).await?;
 
-        let target_proxies = self.proxy_address
+        let target_proxies = self
+            .proxy_address
             .map(|addr| HashSet::from([VaultProxyAddress(addr)]))
             .unwrap_or(HashSet::new());
-                
+
         let vault_indexer = StarknetVaultIndexer::new(
             self.apibara_api_key.clone(),
             HashSet::from([VaultAddress(self.vault_address)]),
@@ -169,16 +174,35 @@ impl StarknetIndexer {
 
         // Check if transaction already exists to avoid duplicates
         let tx_hash_check = tx_hash.clone();
-        let tx_exists = self
+
+        let tx_lookup_result = self
             .state
             .db_pool
             .interact_with_context(
-                format!("check if deposit transaction exists: {tx_hash_check}"),
-                move |conn| UserTransaction::exists_by_hash(&tx_hash_check, conn),
+                format!("fetch transaction for: {tx_hash_check}"),
+                move |conn| UserTransaction::find_by_tx_hash(&tx_hash_check, conn),
             )
-            .await?;
+            .await;
 
-        if tx_exists {
+        if let Ok(tx) = tx_lookup_result {
+            let tx_hash = tx.tx_hash.clone();
+
+            // If event has a partner_id attribution, overwrite whatever was stored before
+            if let Some(partner_id) = deposit.partner_id.map(felt_to_hex_str) {
+                self.state
+                    .db_pool
+                    .interact_with_context(
+                        format!("Update partner_id: {partner_id} for transaction: {tx_hash}"),
+                        move |conn| {
+                            tx.update(
+                                &UserTransactionUpdate::new().with_partner_id(partner_id),
+                                conn,
+                            )
+                        },
+                    )
+                    .await?;
+            }
+
             tracing::info!(
                 "[StartknetIndexer] ⏭️  Skipping duplicate deposit transaction: {} (block: {})",
                 tx_hash,

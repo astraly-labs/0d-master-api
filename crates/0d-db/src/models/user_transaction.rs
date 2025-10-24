@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use utoipa::ToSchema;
 
-use crate::schema::user_transactions;
+use crate::schema::user_transactions::{self};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = user_transactions)]
@@ -52,11 +52,35 @@ pub struct NewUserTransaction {
 #[diesel(table_name = user_transactions)]
 pub struct UserTransactionUpdate {
     pub status: Option<String>,
+    pub partner_id: Option<String>,
     pub shares_amount: Option<Decimal>,
     pub share_price: Option<Decimal>,
     pub gas_fee: Option<Decimal>,
     pub metadata: Option<JsonValue>,
     pub updated_at: Option<DateTime<Utc>>,
+}
+
+impl UserTransactionUpdate {
+    pub fn new() -> Self {
+        Self {
+            status: None,
+            partner_id: None,
+            shares_amount: None,
+            share_price: None,
+            gas_fee: None,
+            metadata: None,
+            updated_at: Some(Utc::now()),
+        }
+    }
+    pub fn with_partner_id(mut self, partner_id: String) -> Self {
+        self.partner_id = Some(partner_id);
+        self
+    }
+
+    pub fn with_status(mut self, status: String) -> Self {
+        self.status = Some(status);
+        self
+    }
 }
 
 // Transaction types enum for better type safety
@@ -108,6 +132,12 @@ impl UserTransaction {
             user_transactions::table.filter(user_transactions::tx_hash.eq(tx_hash)),
         ))
         .get_result(conn)
+    }
+
+    pub fn find_by_tx_hash(tx_hash: &str, conn: &mut diesel::PgConnection) -> QueryResult<Self> {
+        user_transactions::table
+            .filter(user_transactions::tx_hash.eq(tx_hash))
+            .first(conn)
     }
 
     /// Find transactions for a user in a specific vault
@@ -187,6 +217,7 @@ impl UserTransaction {
             status: Some(status.as_str().to_string()),
             shares_amount: None,
             share_price: None,
+            partner_id: None,
             gas_fee: None,
             metadata: None,
             updated_at: Some(Utc::now()),
