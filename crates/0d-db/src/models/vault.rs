@@ -19,6 +19,7 @@ pub struct Vault {
     pub status: String,
     pub inception_date: Option<NaiveDate>,
     pub contract_address: String,
+    pub proxy_address: Option<String>,
     pub mgmt_fee_bps: Option<i32>,
     pub perf_fee_bps: i32,
     pub strategy_brief: Option<String>,

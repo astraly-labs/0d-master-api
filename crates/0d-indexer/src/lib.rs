@@ -61,6 +61,7 @@ impl IndexerService {
                     vault_address: Felt::from_hex(&vault.contract_address).unwrap_or_else(|_| {
                         panic!("Invalid vault address: {}", vault.contract_address)
                     }),
+                    proxy_address: vault.proxy_address.and_then(|v| Felt::from_hex(&v).ok()),
                     apibara_api_key: self.apibara_api_key.clone(),
                     starknet_provider: self.starknet_provider.clone(),
                     state: VaultState::new(
