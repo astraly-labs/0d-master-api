@@ -189,6 +189,12 @@ impl StarknetIndexer {
 
             // If event has a partner_id attribution, overwrite whatever was stored before
             if let Some(partner_id) = deposit.partner_id.map(felt_to_hex_str) {
+                tracing::info!(
+                    "[StartknetIndexer] ⏭️  Updating partner id: {} (block: {})",
+                    tx_hash,
+                    block_number
+                );
+
                 self.state
                     .db_pool
                     .interact_with_context(
