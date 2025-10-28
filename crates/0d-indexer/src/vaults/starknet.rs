@@ -182,9 +182,9 @@ impl StarknetIndexer {
                 format!("fetch transaction for: {tx_hash_check}"),
                 move |conn| UserTransaction::find_by_tx_hash(&tx_hash_check, conn),
             )
-            .await;
+            .await?;
 
-        if let Ok(tx) = tx_lookup_result {
+        if let Some(tx) = tx_lookup_result {
             let tx_hash = tx.tx_hash.clone();
 
             // If event has a partner_id attribution, overwrite whatever was stored before

@@ -134,10 +134,14 @@ impl UserTransaction {
         .get_result(conn)
     }
 
-    pub fn find_by_tx_hash(tx_hash: &str, conn: &mut diesel::PgConnection) -> QueryResult<Self> {
+    pub fn find_by_tx_hash(
+        tx_hash: &str,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Option<Self>> {
         user_transactions::table
             .filter(user_transactions::tx_hash.eq(tx_hash))
             .first(conn)
+            .optional()
     }
 
     /// Find transactions for a user in a specific vault
