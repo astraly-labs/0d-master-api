@@ -153,6 +153,7 @@ fn deploy_vault_proxy(vault_address: ContractAddress) -> ContractAddress {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
     use snforge_std::cheat_caller_address;
     use snforge_std::cheatcodes::generate_random_felt::generate_random_felt;
@@ -256,5 +257,51 @@ mod test {
         ]);
 
     }
+
+
+    #[test]
+    fn test_creation_with_zero_vault_address() {
+        let contract = declare("OZVaultDepositProxy").unwrap().contract_class();
+        let deployment_result = contract.deploy(@array![0_u128.into()]);
+        
+        if let Err(data) = deployment_result {
+            assert_eq!(data, array!['vault_addr_is_zero']);
+        } else {
+            assert!(false, "Deployment with zero vault address should fail");
+        }
+    }
+
+    #[test]
+    #[should_panic(expected: "not_enought_allowance")]
+    fn test_not_enough_allowance_proxy_flow() {
+        //
+        // Preparation:
+        //
+        // 1. Generate some asset owner address: random
+        let partner_id: felt252 = 'argent'.try_into().unwrap();
+        let asset_owner: ContractAddress = generate_random_felt().try_into().unwrap();
+        let deposit_amount: u256 = 100;
+
+        // 2. Deploy asset contract, mint some assets to asset owner
+        let asset_address = deploy_asset(asset_owner, 0.try_into().unwrap());
+
+        // 3. Deploy vault contract, pointing at assets
+        let vault_address = deploy_vault(asset_address, 100);
+        
+        // 4. Deploy vault proxy contract, pointing at vault contract
+        let proxy_address = deploy_vault_proxy(vault_address);
+
+        let proxy = IOZVaultDepositProxyDispatcher {
+            contract_address: proxy_address
+        };
+
+        assert_eq!(proxy.vault(), vault_address);
+        assert_eq!(proxy.asset(), asset_address);
+
+        // 1. Owner performs deposit operation against proxy
+        cheat_caller_address(proxy_address, asset_owner, snforge_std::CheatSpan::TargetCalls(1));
+        proxy.deposit(deposit_amount, asset_owner, partner_id);
+    }
+
 }
 

@@ -77,7 +77,7 @@ use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess};
 
     #[constructor]
     fn constructor(ref self: ContractState, vault_address: ContractAddress) {
-        assert(vault_address.is_zero(), 'vault_addr_is_zero');
+        assert(vault_address.is_non_zero(), 'vault_addr_is_zero');
 
         self.vault_address.write(vault_address);
     }
@@ -93,8 +93,8 @@ use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess};
             let asset = IERC20Dispatcher { contract_address: vault.asset() };
 
             let proxy_address = starknet::get_contract_address();
-
-            assert(asset.allowance(caller, proxy_address) >= assets, 'not_enought_allowance');
+            
+            assert!(asset.allowance(caller, proxy_address) >= assets, "not_enought_allowance");
 
             // Transfer assets from caller to this contract
             asset.transfer_from(caller, proxy_address, assets);
