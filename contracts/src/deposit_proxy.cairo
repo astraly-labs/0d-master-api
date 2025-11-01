@@ -27,14 +27,14 @@ pub trait IOZVaultDepositProxy<TContractState> {
     ///
     /// # Returns
     /// The contract address of the vault
-    fn vault(ref self: TContractState) -> ContractAddress;
+    fn vault(self: @TContractState) -> ContractAddress;
 
     /// Returns the address of the underlying vaults asset token.
     /// This is the address of the ERC20 token that should be approved before deposits.
     ///
     /// # Returns
     /// The contract address of the asset (ERC20 token)
-    fn asset(ref self: TContractState) -> ContractAddress;
+    fn asset(self: @TContractState) -> ContractAddress;
 }
 
 /// Proxy for depositing into an OpenZeppelin ERC4626 Vault
@@ -47,7 +47,8 @@ pub trait IOZVaultDepositProxy<TContractState> {
 /// 
 #[starknet::contract]
 pub mod OZVaultDepositProxy {
-    use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess};
+    use core::num::traits::Zero;
+use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess};
     use openzeppelin::interfaces::token::erc4626::{IERC4626Dispatcher, IERC4626DispatcherTrait};
     use openzeppelin::interfaces::token::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
     use super::ContractAddress;
@@ -76,6 +77,8 @@ pub mod OZVaultDepositProxy {
 
     #[constructor]
     fn constructor(ref self: ContractState, vault_address: ContractAddress) {
+        assert(vault_address.is_zero(), 'vault_addr_is_zero');
+
         self.vault_address.write(vault_address);
     }
 
@@ -88,10 +91,17 @@ pub mod OZVaultDepositProxy {
             let vault = IERC4626Dispatcher { contract_address: vault_address };
 
             let asset = IERC20Dispatcher { contract_address: vault.asset() };
+
+            let proxy_address = starknet::get_contract_address();
+
+            assert(asset.allowance(caller, proxy_address) >= assets, 'not_enought_allowance');
+
             // Transfer assets from caller to this contract
-            asset.transfer_from(caller, starknet::get_contract_address(), assets);
+            asset.transfer_from(caller, proxy_address, assets);
+
             // Approve underlying vault to pull assets
             asset.approve(vault_address, assets);
+
             // Execute deposit
             let shares = vault.deposit(assets, receiver);
             // Emit event
@@ -106,13 +116,13 @@ pub mod OZVaultDepositProxy {
             return shares;
         }
         
-        fn asset(ref self: ContractState) -> ContractAddress {
+        fn asset(self: @ContractState) -> ContractAddress {
             let vault_address = self.vault_address.read();
             let vault = IERC4626Dispatcher { contract_address: vault_address };
             return vault.asset();
         }
         
-        fn vault(ref self: ContractState) -> ContractAddress {
+        fn vault(self: @ContractState) -> ContractAddress {
             return self.vault_address.read();
         }
     }
