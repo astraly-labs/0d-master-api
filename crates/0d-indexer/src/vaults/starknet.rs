@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use evian::contracts::starknet::vault::StarknetVaultContract;
 use evian::contracts::starknet::vault::data::indexer::events::{
     DepositEvent, RedeemClaimedEvent, RedeemRequestedEvent, VaultAddress, VaultEvent,
+    VaultProxyAddress,
 };
 use evian::{
     contracts::starknet::vault::StarknetVaultIndexer, utils::indexer::handler::OutputEvent,
@@ -16,7 +17,10 @@ use zerod_db::ZerodPool;
 use zerod_db::models::{
     user::User,
     user_position::{NewUserPosition, UserPosition, UserPositionUpdate},
-    user_transaction::{NewUserTransaction, TransactionStatus, TransactionType, UserTransaction},
+    user_transaction::{
+        NewUserTransaction, TransactionStatus, TransactionType, UserTransaction,
+        UserTransactionUpdate,
+    },
 };
 
 use crate::vaults::helpers::felt_to_hex_str;
@@ -26,6 +30,7 @@ use crate::vaults::state::VaultState;
 pub struct StarknetIndexer {
     pub apibara_api_key: String,
     pub vault_address: Felt,
+    pub proxy_address: Option<Felt>,
     pub vault_id: String,
     pub starknet_provider: FallbackProvider,
     pub state: VaultState,
@@ -37,9 +42,15 @@ impl SupervisedTask for StarknetIndexer {
         // Load the last processed block from the database
         self.state.load_last_processed_block(&self.vault_id).await?;
 
+        let target_proxies = self
+            .proxy_address
+            .map(|addr| HashSet::from([VaultProxyAddress(addr)]))
+            .unwrap_or(HashSet::new());
+
         let vault_indexer = StarknetVaultIndexer::new(
             self.apibara_api_key.clone(),
             HashSet::from([VaultAddress(self.vault_address)]),
+            target_proxies,
             self.state.current_block,
         );
 
@@ -163,16 +174,41 @@ impl StarknetIndexer {
 
         // Check if transaction already exists to avoid duplicates
         let tx_hash_check = tx_hash.clone();
-        let tx_exists = self
+
+        let tx_lookup_result = self
             .state
             .db_pool
             .interact_with_context(
-                format!("check if deposit transaction exists: {tx_hash_check}"),
-                move |conn| UserTransaction::exists_by_hash(&tx_hash_check, conn),
+                format!("fetch transaction for: {tx_hash_check}"),
+                move |conn| UserTransaction::find_by_tx_hash(&tx_hash_check, conn),
             )
             .await?;
 
-        if tx_exists {
+        if let Some(tx) = tx_lookup_result {
+            let tx_hash = tx.tx_hash.clone();
+
+            // If event has a partner_id attribution, overwrite whatever was stored before
+            if let Some(partner_id) = deposit.partner_id.map(felt_to_hex_str) {
+                tracing::info!(
+                    "[StartknetIndexer] ⏭️  Updating partner id: {} (block: {})",
+                    tx_hash,
+                    block_number
+                );
+
+                self.state
+                    .db_pool
+                    .interact_with_context(
+                        format!("Update partner_id: {partner_id} for transaction: {tx_hash}"),
+                        move |conn| {
+                            tx.update(
+                                &UserTransactionUpdate::new().with_partner_id(partner_id),
+                                conn,
+                            )
+                        },
+                    )
+                    .await?;
+            }
+
             tracing::info!(
                 "[StartknetIndexer] ⏭️  Skipping duplicate deposit transaction: {} (block: {})",
                 tx_hash,
@@ -192,6 +228,7 @@ impl StarknetIndexer {
             type_: TransactionType::Deposit.as_str().to_string(),
             status: TransactionStatus::Confirmed.as_str().to_string(),
             amount: deposit_assets,
+            partner_id: deposit.partner_id.map(felt_to_hex_str),
             shares_amount: Some(deposit_shares),
             share_price,
             gas_fee: None,
@@ -314,6 +351,7 @@ impl StarknetIndexer {
             type_: TransactionType::Withdraw.as_str().to_string(),
             status: TransactionStatus::Pending.as_str().to_string(),
             amount: redeem_assets,
+            partner_id: None,
             shares_amount: Some(redeem_shares),
             share_price,
             gas_fee: None,
