@@ -109,7 +109,6 @@ impl VesuClient {
             .vaults_controller_get_vault_history(
                 &self.contract_address,
                 Some(params.max_reports.into()),
-                Some(params.apr_calculation_delta.into()),
             )
             .await?;
 
@@ -149,9 +148,11 @@ impl VaultMasterClient for VesuClient {
         &self,
         _group_by: &str,
     ) -> Result<CompositionDTO, MasterApiError> {
-        Err(MasterApiError::AnyhowError(anyhow!(
-            "Composition not supported by Vesu API"
-        )))
+        let composition = self
+            .client
+            .vaults_controller_get_vault_composition(&self.contract_address)
+            .await?;
+        Ok(composition.into_inner().into())
     }
 
     async fn get_vault_composition_series(

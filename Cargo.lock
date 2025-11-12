@@ -5759,9 +5759,9 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vesu-sdk"
-version = "0.1.0"
+version = "0.1.1"
 source = "sparse+https://registry.devnet.pragma.build/api/v1/crates/"
-checksum = "12e6dab62436c549779661d479dfc688c76ffae665c9234bb8e504751c1d051f"
+checksum = "dcee195b0fc36f88c7c0ff37844e407fd34073ba96f9c5336515ed35bc3da17e"
 dependencies = [
  "bytes",
  "chrono",
@@ -5957,7 +5957,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]

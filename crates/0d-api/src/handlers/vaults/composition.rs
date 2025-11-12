@@ -15,6 +15,7 @@ use crate::{
     AppState,
     dto::{ApiResponse, CompositionQuery, CompositionSeriesQuery},
     errors::{ApiError, DatabaseErrorExt},
+    helpers::{call_vault_backend, fetch_vault_with_client},
 };
 
 #[utoipa::path(
@@ -37,25 +38,18 @@ pub async fn get_vault_composition(
     Path(vault_id): Path<String>,
     Query(params): Query<CompositionQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let vault_id_clone = vault_id.clone();
-    let vault = state
-        .pool
-        .interact_with_context(format!("find vault by id: {vault_id}"), move |conn| {
-            Vault::find_by_id(&vault_id_clone, conn)
-        })
-        .await
-        .map_err(|e| e.or_not_found(format!("Vault {vault_id} not found")))?;
-
-    // Call the vault's composition endpoint via helper
-    // TODO: add composition for vesu
-    let client = JaffarClient::new(&vault.api_endpoint);
-    let composition = client
-        .get_vault_composition(params.group_by.as_str())
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch vault composition: {}", e);
-            ApiError::InternalServerError
-        })?;
+    let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
+    let group_by = params.group_by.as_str().to_owned();
+    let composition = call_vault_backend(
+        &client,
+        &vault,
+        "fetch vault composition",
+        move |backend| {
+            let group_by = group_by.clone();
+            async move { backend.get_vault_composition(&group_by).await }
+        },
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(composition)))
 }

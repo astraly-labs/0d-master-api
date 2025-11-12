@@ -207,6 +207,51 @@ impl From<HistoryWithMetric> for TimeseriesResponseDTO {
 }
 
 // ============================================================================
+// Composition conversions
+// ============================================================================
+
+impl From<Vec<vesu_sdk::types::VaultsControllerGetVaultCompositionResponseItem>>
+    for crate::dto::CompositionDTO
+{
+    fn from(
+        items: Vec<vesu_sdk::types::VaultsControllerGetVaultCompositionResponseItem>,
+    ) -> Self {
+        use crate::dto::CompositionPosition;
+
+        // Calculate total TVL across all positions
+        let total_tvl: f64 = items
+            .iter()
+            .map(|item| parse_decimal(Some(&item.collateral_amount)))
+            .sum();
+
+        let positions = items
+            .into_iter()
+            .map(|item| {
+                let collateral_value = parse_decimal(Some(&item.collateral_amount));
+                let pct = if total_tvl > f64::EPSILON {
+                    (collateral_value / total_tvl) * 100.0
+                } else {
+                    0.0
+                };
+
+                CompositionPosition {
+                    platform: item.contract_address,
+                    debt_asset: item.debt_symbol.unwrap_or_else(|| "None".to_string()),
+                    collateral_asset: item.collateral_symbol,
+                    pct,
+                    apy_est_pct: 0.0, // Not provided by Vesu API
+                }
+            })
+            .collect();
+
+        crate::dto::CompositionDTO {
+            as_of: Utc::now().to_rfc3339(),
+            positions,
+        }
+    }
+}
+
+// ============================================================================
 // History parameters helper
 // ============================================================================
 
