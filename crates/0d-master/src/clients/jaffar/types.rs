@@ -179,7 +179,7 @@ impl From<jaffar_sdk::types::VaultInfoResponse> for VaultInfoDTO {
             current_epoch: info.current_epoch,
             underlying_currency: info.underlying_currency,
             underlying_currency_address:
-                "0x053C91253BC9682c04929cA02ED00b3E423f6710D2ee7e0D5EBB06F3eCF368A8".to_string(),
+                "0x033068F6539f8e6e6b131e6B2B814e6c34A5224bC66947c47DaB9dFeE93b35fb".to_string(),
             pending_withdrawals_assets: info.pending_withdrawals_assets,
             aum: info.aum,
             buffer: info.buffer,
