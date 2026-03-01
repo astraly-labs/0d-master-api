@@ -78,13 +78,13 @@ zerod_quoting = { path = "crates/0d-quoting", default-features = false }
 zerod_types = { path = "crates/0d-types", default-features = false }
 
 # Pragma crates
-pragma-common = { version = "0.4.1", features = [
+pragma-common = { version = "0.6.4", features = [
     "telemetry",
     "serde",
     "utoipa",
     "services",
 ] }
-evian = { version = "0.6.10", registry = "pragma", features = [
+evian = { version = "0.7.33", registry = "pragma", features = [
     "pragma_oracle",
     "starknet_erc4626",
     "starknet_erc20",
