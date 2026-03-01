@@ -7,7 +7,7 @@ use evian::contracts::starknet::vault::data::indexer::events::{
     VaultProxyAddress,
 };
 use evian::{
-    contracts::starknet::vault::StarknetVaultIndexer, utils::indexer::handler::OutputEvent,
+    contracts::starknet::vault::StarknetVaultIndexer, utils::starknet_indexer::handler::OutputEvent,
 };
 use pragma_common::starknet::FallbackProvider;
 use rust_decimal::{Decimal, MathematicalOps, dec};
