@@ -537,7 +537,15 @@ impl StarknetIndexer {
                                 updated_at: Some(Utc::now()),
                             };
 
-                            position.update(&updates, conn)
+                            position.update(&updates, conn).map(|_| ())
+                        }
+                        Err(e) if e == diesel::result::Error::NotFound => {
+                            tracing::warn!(
+                                "[Vault {}] ⚠️ RedeemClaimed: user position not found for cost_basis update: user={}, skipping",
+                                vault_id_for_position,
+                                user_addr_for_position
+                            );
+                            Ok(())
                         }
                         Err(e) => Err(e),
                     }
