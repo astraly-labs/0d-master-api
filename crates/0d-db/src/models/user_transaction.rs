@@ -302,8 +302,9 @@ impl UserTransaction {
         }
     }
 
-    /// Find pending redeem transaction by `redeem_id` from metadata
-    pub fn find_pending_redeem_by_id(
+    /// Find redeem transaction by `redeem_id` regardless of status (pending or confirmed).
+    /// Used for idempotent handling of RedeemClaimed events.
+    pub fn find_redeem_by_id(
         user_address: &str,
         vault_id: &str,
         redeem_id: &str,
@@ -315,7 +316,6 @@ impl UserTransaction {
             .filter(user_transactions::user_address.eq(user_address))
             .filter(user_transactions::vault_id.eq(vault_id))
             .filter(user_transactions::type_.eq(TransactionType::Withdraw.as_str()))
-            .filter(user_transactions::status.eq(TransactionStatus::Pending.as_str()))
             .filter(user_transactions::metadata.is_not_null())
             .load::<Self>(conn)?
             .into_iter()
@@ -326,7 +326,6 @@ impl UserTransaction {
                 {
                     return id_str == redeem_id;
                 }
-
                 false
             })
             .ok_or(diesel::result::Error::NotFound)
