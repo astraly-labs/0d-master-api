@@ -432,17 +432,17 @@ impl StarknetIndexer {
         let redeem_id = redeem_claimed.id.to_string();
         let vault_id = self.vault_id.clone();
 
-        let transaction = self
+        let transaction = match self
             .state
             .db_pool
             .interact_with_context(
-                format!("find pending redeem transaction for user: {user_address}"),
+                format!("find redeem transaction for user: {user_address}"),
                 {
                     let user_addr = user_address.clone();
                     let vault_id_check = vault_id.clone();
                     let redeem_id_check = redeem_id.clone();
                     move |conn| {
-                        UserTransaction::find_pending_redeem_by_id(
+                        UserTransaction::find_redeem_by_id(
                             &user_addr,
                             &vault_id_check,
                             &redeem_id_check,
@@ -451,7 +451,29 @@ impl StarknetIndexer {
                     }
                 },
             )
-            .await?;
+            .await
+        {
+            Ok(tx) if tx.status == TransactionStatus::Confirmed.as_str() => {
+                tracing::info!(
+                    "[Vault {}] ⏭️ RedeemClaimed: redeem_id={} already confirmed (tx_id={}), skipping",
+                    vault_id,
+                    redeem_id,
+                    tx.id
+                );
+                return Ok(());
+            }
+            Ok(tx) => tx,
+            Err(e) if e.is_not_found() => {
+                tracing::warn!(
+                    "[Vault {}] ⚠️ RedeemClaimed: no redeem found for user={} redeem_id={} — RedeemRequested was never indexed, skipping",
+                    vault_id,
+                    user_address,
+                    redeem_id
+                );
+                return Ok(());
+            }
+            Err(e) => return Err(e.into()),
+        };
 
         // Update the original pending transaction to confirmed status
         self.state
