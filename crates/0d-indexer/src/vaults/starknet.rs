@@ -11,7 +11,7 @@ use evian::{
 };
 use pragma_common::starknet::FallbackProvider;
 use rust_decimal::{Decimal, MathematicalOps, dec};
-use starknet::core::types::{BlockId, Felt};
+use starknet::core::types::Felt;
 use task_supervisor::{SupervisedTask, TaskError};
 use zerod_db::ZerodPool;
 use zerod_db::models::{
@@ -158,7 +158,7 @@ impl StarknetIndexer {
             StarknetVaultContract::new(self.starknet_provider.clone(), self.vault_address);
         let underlying_asset_decimals = Decimal::from(
             vault_contract
-                .underlying_asset_decimals(Some(BlockId::Number(block_number)))
+                .underlying_asset_decimals(None)
                 .await?,
         );
 
@@ -304,7 +304,7 @@ impl StarknetIndexer {
             StarknetVaultContract::new(self.starknet_provider.clone(), self.vault_address);
         let underlying_asset_decimals = Decimal::from(
             vault_contract
-                .underlying_asset_decimals(Some(BlockId::Number(block_number)))
+                .underlying_asset_decimals(None)
                 .await?,
         );
 

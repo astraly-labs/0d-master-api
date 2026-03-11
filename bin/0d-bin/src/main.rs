@@ -58,9 +58,9 @@ async fn main() -> Result<()> {
     let kpi_service = KpiTask::new(pool.clone());
 
     ServiceGroup::default()
-        .with(api_service)
-        .with(indexer_service)
-        .with(kpi_service)
+        .with_critical(api_service)
+        .with_critical(indexer_service)
+        .with_critical(kpi_service)
         .start_and_drive_to_end()
         .await?;
 
