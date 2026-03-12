@@ -6649,7 +6649,7 @@ dependencies = [
 
 [[package]]
 name = "zerod_api"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6685,7 +6685,7 @@ dependencies = [
 
 [[package]]
 name = "zerod_bin"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "anyhow",
  "clap",
@@ -6702,7 +6702,7 @@ dependencies = [
 
 [[package]]
 name = "zerod_db"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "anyhow",
  "bigdecimal",
@@ -6725,7 +6725,7 @@ dependencies = [
 
 [[package]]
 name = "zerod_indexer"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6745,7 +6745,7 @@ dependencies = [
 
 [[package]]
 name = "zerod_kpi"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6766,7 +6766,7 @@ dependencies = [
 
 [[package]]
 name = "zerod_master"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6787,7 +6787,7 @@ dependencies = [
 
 [[package]]
 name = "zerod_quoting"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6808,7 +6808,7 @@ dependencies = [
 
 [[package]]
 name = "zerod_types"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "serde",
  "strum 0.26.3",
