@@ -121,14 +121,25 @@ where
     let client_arc = client.client();
 
     f(client_arc).await.map_err(|err| {
-        tracing::error!(
-            vault_id = %vault.id,
-            backend = backend.as_str(),
-            operation,
-            error = %err,
-            "Vault backend call failed",
-        );
-        ApiError::InternalServerError
+        if let MasterApiError::NotImplemented(ref msg) = err {
+            tracing::warn!(
+                vault_id = %vault.id,
+                backend = backend.as_str(),
+                operation,
+                %msg,
+                "Vault backend operation not implemented",
+            );
+            ApiError::NotImplemented(msg.clone())
+        } else {
+            tracing::error!(
+                vault_id = %vault.id,
+                backend = backend.as_str(),
+                operation,
+                error = %err,
+                "Vault backend call failed",
+            );
+            ApiError::InternalServerError
+        }
     })
 }
 

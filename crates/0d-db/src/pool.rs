@@ -64,13 +64,20 @@ impl ZerodPool for Pool {
                     message: e.to_string(),
                 }
             })?
-            .map_err(|e| {
+.map_err(|e| {
                 let db_error: DatabaseError = e.into();
-                tracing::error!(
-                    operation = %operation,
-                    error = %db_error,
-                    "Database query failed"
-                );
+                if db_error.is_not_found() {
+                    tracing::debug!(
+                        operation = %operation,
+                        "Record not found"
+                    );
+                } else {
+                    tracing::error!(
+                        operation = %operation,
+                        error = %db_error,
+                        "Database query failed"
+                    );
+                }
                 db_error
             })
     }

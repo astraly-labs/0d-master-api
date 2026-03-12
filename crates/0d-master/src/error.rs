@@ -19,6 +19,9 @@ pub enum MasterApiError {
 
     #[error("Vesu SDK error: {0}")]
     VesuSdkError(String),
+
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
 }
 
 impl<T> From<jaffar_sdk::Error<T>> for MasterApiError

@@ -60,7 +60,7 @@ impl VaultMasterClient for JaffarClient {
         _group_by: &str,
     ) -> Result<CompositionSeriesDTO, MasterApiError> {
         // Not implemented in SDK - return error
-        Err(MasterApiError::JaffarSdkError(
+        Err(MasterApiError::NotImplemented(
             "Composition series endpoint not available in Jaffar SDK".to_string(),
         ))
     }
@@ -72,7 +72,7 @@ impl VaultMasterClient for JaffarClient {
 
     async fn get_vault_caps(&self) -> Result<CapsDTO, MasterApiError> {
         // Not implemented in SDK - return error
-        Err(MasterApiError::JaffarSdkError(
+        Err(MasterApiError::NotImplemented(
             "Caps endpoint not available in Jaffar SDK".to_string(),
         ))
     }
@@ -118,14 +118,14 @@ impl VaultMasterClient for JaffarClient {
 
     async fn get_vault_liquidity(&self) -> Result<LiquidityDTO, MasterApiError> {
         // Not implemented in SDK - return error
-        Err(MasterApiError::JaffarSdkError(
+        Err(MasterApiError::NotImplemented(
             "Liquidity endpoint not available in Jaffar SDK".to_string(),
         ))
     }
 
     async fn get_vault_slippage_curve(&self) -> Result<SlippageCurveDTO, MasterApiError> {
         // Not implemented in SDK - return error
-        Err(MasterApiError::JaffarSdkError(
+        Err(MasterApiError::NotImplemented(
             "Slippage curve endpoint not available in Jaffar SDK".to_string(),
         ))
     }
@@ -135,7 +135,7 @@ impl VaultMasterClient for JaffarClient {
         _amount: &str,
     ) -> Result<LiquiditySimulateResponseDTO, MasterApiError> {
         // Not implemented in SDK - return error
-        Err(MasterApiError::JaffarSdkError(
+        Err(MasterApiError::NotImplemented(
             "Liquidity simulation endpoint not available in Jaffar SDK".to_string(),
         ))
     }

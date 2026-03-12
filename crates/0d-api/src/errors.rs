@@ -67,6 +67,7 @@ impl From<MasterApiError> for ApiError {
             | MasterApiError::AnyhowError(_)
             | MasterApiError::JaffarSdkError(_)
             | MasterApiError::VesuSdkError(_) => Self::InternalServerError,
+            MasterApiError::NotImplemented(msg) => Self::NotImplemented(msg),
         }
     }
 }
