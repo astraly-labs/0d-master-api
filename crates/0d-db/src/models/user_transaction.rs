@@ -53,6 +53,7 @@ pub struct NewUserTransaction {
 pub struct UserTransactionUpdate {
     pub status: Option<String>,
     pub partner_id: Option<String>,
+    pub amount: Option<Decimal>,
     pub shares_amount: Option<Decimal>,
     pub share_price: Option<Decimal>,
     pub gas_fee: Option<Decimal>,
@@ -65,6 +66,7 @@ impl UserTransactionUpdate {
         Self {
             status: None,
             partner_id: None,
+            amount: None,
             shares_amount: None,
             share_price: None,
             gas_fee: None,
@@ -79,6 +81,16 @@ impl UserTransactionUpdate {
 
     pub fn with_status(mut self, status: String) -> Self {
         self.status = Some(status);
+        self
+    }
+
+    pub fn with_amount(mut self, amount: Decimal) -> Self {
+        self.amount = Some(amount);
+        self
+    }
+
+    pub fn with_metadata(mut self, metadata: JsonValue) -> Self {
+        self.metadata = Some(metadata);
         self
     }
 }
@@ -219,6 +231,7 @@ impl UserTransaction {
     ) -> QueryResult<Self> {
         let updates = UserTransactionUpdate {
             status: Some(status.as_str().to_string()),
+            amount: None,
             shares_amount: None,
             share_price: None,
             partner_id: None,
@@ -331,12 +344,11 @@ impl UserTransaction {
             .ok_or(diesel::result::Error::NotFound)
     }
 
-    /// Update transaction status and amount with new transaction hash
+    /// Update transaction status and amount
     pub fn update_status_and_amount(
         id: i32,
         status: &str,
         amount: Decimal,
-        tx_hash: &str,
         conn: &mut diesel::PgConnection,
     ) -> QueryResult<Self> {
         use diesel::prelude::*;
@@ -345,7 +357,6 @@ impl UserTransaction {
             .set((
                 user_transactions::status.eq(status),
                 user_transactions::amount.eq(amount),
-                user_transactions::tx_hash.eq(tx_hash),
                 user_transactions::updated_at.eq(Utc::now()),
             ))
             .get_result(conn)

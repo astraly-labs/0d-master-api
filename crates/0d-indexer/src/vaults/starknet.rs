@@ -487,13 +487,19 @@ impl StarknetIndexer {
                     let tx_id = transaction.id;
                     let new_status = TransactionStatus::Confirmed.as_str().to_string();
                     let actual_amount = redeem_claimed.assets;
-                    let new_tx_hash = tx_hash.clone();
+                    let claim_tx_hash = tx_hash.clone();
                     move |conn| {
-                        UserTransaction::update_status_and_amount(
+                        let tx = UserTransaction::update_status_and_amount(
                             tx_id,
                             &new_status,
                             actual_amount,
-                            &new_tx_hash,
+                            conn,
+                        )?;
+                        // Store claim tx hash in metadata, preserving the original RedeemRequested tx hash
+                        let mut metadata = tx.metadata.clone().unwrap_or_default();
+                        metadata["claim_tx_hash"] = serde_json::Value::String(claim_tx_hash);
+                        tx.update(
+                            &UserTransactionUpdate::new().with_metadata(metadata),
                             conn,
                         )
                     }
