@@ -17,8 +17,8 @@ use zerod_kpi::KpiTask;
 /// The list of all the starknet rpcs that the FallbackProvider may use.
 /// They're sorted by priority (so we sorted them by reliability here).
 pub const STARKNET_RPC_URLS: [&str; 2] = [
+    "http://rpc.node.pragma.build:9545/rpc/v0_9",
     "https://api.cartridge.gg/x/starknet/mainnet",
-    "https://rpc.pathfinder.equilibrium.co/mainnet/rpc/v0_9",
 ];
 
 #[tokio::main]

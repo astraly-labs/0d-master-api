@@ -11,6 +11,7 @@ use crate::{
     AppState,
     dto::{ApiResponse, PendingRedeem, user::PendingRedeemsResponse},
     errors::{ApiError, DatabaseErrorExt},
+    helpers::normalize_address,
 };
 use zerod_db::{
     ZerodPool,
@@ -43,6 +44,8 @@ pub async fn get_user_pending_redeems(
     Path(address): Path<String>,
     Query(query): Query<PendingRedeemsQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let address = normalize_address(&address);
+
     // First verify the user exists
     let address_clone = address.clone();
     let _ = state

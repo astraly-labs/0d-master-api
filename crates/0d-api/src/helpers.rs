@@ -13,6 +13,16 @@ use crate::{
     errors::{ApiError, DatabaseErrorExt},
 };
 
+/// Normalize a Starknet address to lowercase with leading zeros stripped after 0x.
+/// This matches the format used by the indexer (`felt_to_hex_str`) and the frontend.
+pub fn normalize_address(addr: &str) -> String {
+    let lower = addr.to_lowercase();
+    lower.strip_prefix("0x").map_or_else(
+        || lower.clone(),
+        |hex| format!("0x{}", hex.trim_start_matches('0')),
+    )
+}
+
 pub fn map_status(status: &str) -> String {
     match status {
         "active" => "live".to_string(),

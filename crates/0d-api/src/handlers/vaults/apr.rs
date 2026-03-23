@@ -36,10 +36,12 @@ pub async fn get_vault_apr_summary(
 ) -> Result<impl IntoResponse, ApiError> {
     let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
     let apr_basis = params.apr_basis.as_str().to_owned();
-    let apr_summary = call_vault_backend(&client, &vault, "fetch APR summary", move |backend| {
-        let apr_basis = apr_basis.clone();
-        async move { backend.get_vault_apr_summary(&apr_basis).await }
-    })
+    let apr_summary = call_vault_backend(
+        &client,
+        &vault,
+        "fetch APR summary",
+        move |backend| async move { backend.get_vault_apr_summary(&apr_basis).await },
+    )
     .await?;
 
     Ok(Json(ApiResponse::ok(apr_summary)))
@@ -67,10 +69,12 @@ pub async fn get_vault_apr_series(
 ) -> Result<impl IntoResponse, ApiError> {
     let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
     let timeframe = params.timeframe.as_str().to_owned();
-    let apr_series = call_vault_backend(&client, &vault, "fetch APR series", move |backend| {
-        let timeframe = timeframe.clone();
-        async move { backend.get_vault_apr_series(&timeframe).await }
-    })
+    let apr_series = call_vault_backend(
+        &client,
+        &vault,
+        "fetch APR series",
+        move |backend| async move { backend.get_vault_apr_series(&timeframe).await },
+    )
     .await?;
 
     Ok(Json(ApiResponse::ok(apr_series)))

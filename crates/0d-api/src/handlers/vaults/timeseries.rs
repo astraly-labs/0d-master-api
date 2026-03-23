@@ -44,7 +44,6 @@ pub async fn get_vault_timeseries(
         call_vault_backend(&client, &vault, "fetch vault timeseries", move |backend| {
             let metric = metric.clone();
             let timeframe = timeframe.clone();
-            let currency = currency.clone();
             async move {
                 backend
                     .get_vault_timeseries(&metric, &timeframe, &currency)

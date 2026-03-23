@@ -34,9 +34,9 @@ pub async fn get_vault(
         &vault,
         "fetch vault stats and share price",
         |backend| async move {
-            let stats = backend.get_vault_stats().await?;
+            let vault_stats = backend.get_vault_stats().await?;
             let share_price = backend.get_vault_info().await?.share_price_in_usd;
-            Ok((stats, share_price))
+            Ok((vault_stats, share_price))
         },
     )
     .await?;

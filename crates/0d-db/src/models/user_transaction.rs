@@ -61,6 +61,12 @@ pub struct UserTransactionUpdate {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
+impl Default for UserTransactionUpdate {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UserTransactionUpdate {
     pub fn new() -> Self {
         Self {
@@ -74,21 +80,26 @@ impl UserTransactionUpdate {
             updated_at: Some(Utc::now()),
         }
     }
+
+    #[must_use]
     pub fn with_partner_id(mut self, partner_id: String) -> Self {
         self.partner_id = Some(partner_id);
         self
     }
 
+    #[must_use]
     pub fn with_status(mut self, status: String) -> Self {
         self.status = Some(status);
         self
     }
 
-    pub fn with_amount(mut self, amount: Decimal) -> Self {
+    #[must_use]
+    pub const fn with_amount(mut self, amount: Decimal) -> Self {
         self.amount = Some(amount);
         self
     }
 
+    #[must_use]
     pub fn with_metadata(mut self, metadata: JsonValue) -> Self {
         self.metadata = Some(metadata);
         self
@@ -316,7 +327,7 @@ impl UserTransaction {
     }
 
     /// Find redeem transaction by `redeem_id` regardless of status (pending or confirmed).
-    /// Used for idempotent handling of RedeemClaimed events.
+    /// Used for idempotent handling of `RedeemClaimed` events.
     pub fn find_redeem_by_id(
         user_address: &str,
         vault_id: &str,

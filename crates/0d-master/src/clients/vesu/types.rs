@@ -59,7 +59,7 @@ impl From<&vesu_sdk::types::VaultsControllerGetVaultsResponseItem> for GetStatsD
         let tvl_usd = vault.tvl_usd.clone().unwrap_or_else(|| "0".to_string());
         let apr_pct = parse_decimal(vault.apr.as_deref());
 
-        GetStatsDTO {
+        Self {
             tvl,
             tvl_usd,
             past_month_apr_pct: apr_pct,
@@ -81,7 +81,7 @@ impl<'a> From<VaultWithBasis<'a>> for AprSummaryDTO {
     fn from(vwb: VaultWithBasis<'a>) -> Self {
         let apr_pct = parse_decimal(vwb.vault.apr.as_deref());
 
-        AprSummaryDTO {
+        Self {
             apr_pct,
             apr_basis: vwb.apr_basis,
         }
@@ -114,7 +114,7 @@ impl From<HistoryWithTimeframe> for AprSeriesDTO {
             .filter_map(try_apr_point_from_entry)
             .collect();
 
-        AprSeriesDTO {
+        Self {
             timeframe: hwt.timeframe,
             points,
         }
@@ -198,7 +198,7 @@ impl From<HistoryWithMetric> for TimeseriesResponseDTO {
             Vec::new() // pnl or other metrics not supported
         };
 
-        TimeseriesResponseDTO {
+        Self {
             metric: hwm.metric,
             timeframe: hwm.timeframe,
             points,
@@ -213,9 +213,7 @@ impl From<HistoryWithMetric> for TimeseriesResponseDTO {
 impl From<Vec<vesu_sdk::types::VaultsControllerGetVaultCompositionResponseItem>>
     for crate::dto::CompositionDTO
 {
-    fn from(
-        items: Vec<vesu_sdk::types::VaultsControllerGetVaultCompositionResponseItem>,
-    ) -> Self {
+    fn from(items: Vec<vesu_sdk::types::VaultsControllerGetVaultCompositionResponseItem>) -> Self {
         use crate::dto::CompositionPosition;
 
         // Calculate total TVL across all positions
@@ -244,7 +242,7 @@ impl From<Vec<vesu_sdk::types::VaultsControllerGetVaultCompositionResponseItem>>
             })
             .collect();
 
-        crate::dto::CompositionDTO {
+        Self {
             as_of: Utc::now().to_rfc3339(),
             positions,
         }
@@ -257,6 +255,7 @@ impl From<Vec<vesu_sdk::types::VaultsControllerGetVaultCompositionResponseItem>>
 
 pub(super) struct HistoryParams {
     pub max_reports: u32,
+    #[allow(dead_code)]
     pub apr_calculation_delta: u32,
 }
 

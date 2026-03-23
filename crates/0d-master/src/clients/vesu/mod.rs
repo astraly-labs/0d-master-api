@@ -63,8 +63,7 @@ impl VesuClient {
                 vault
                     .vault
                     .as_ref()
-                    .map(|v| v.to_lowercase() == target_address)
-                    .unwrap_or(false)
+                    .is_some_and(|v| v.to_lowercase() == target_address)
             })
             .ok_or_else(|| {
                 MasterApiError::AnyhowError(anyhow!(

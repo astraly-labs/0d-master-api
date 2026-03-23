@@ -24,8 +24,8 @@ pub(super) fn timeframe_from_str(timeframe: &str) -> Option<jaffar_sdk::types::T
 impl From<jaffar_sdk::types::AprSummaryBasis> for AprBasis {
     fn from(basis: jaffar_sdk::types::AprSummaryBasis) -> Self {
         match basis {
-            jaffar_sdk::types::AprSummaryBasis::Nominal => AprBasis::Nominal,
-            jaffar_sdk::types::AprSummaryBasis::InflationAdjusted => AprBasis::InflationAdjusted,
+            jaffar_sdk::types::AprSummaryBasis::Nominal => Self::Nominal,
+            jaffar_sdk::types::AprSummaryBasis::InflationAdjusted => Self::InflationAdjusted,
         }
     }
 }
@@ -56,7 +56,7 @@ pub(super) fn group_by_from_str(group_by: &str) -> Option<jaffar_sdk::types::Com
 
 impl From<jaffar_sdk::types::GetStatsResponse> for GetStatsDTO {
     fn from(stats: jaffar_sdk::types::GetStatsResponse) -> Self {
-        GetStatsDTO {
+        Self {
             tvl: stats.tvl,
             tvl_usd: stats.tvl_as_usd,
             past_month_apr_pct: stats.past_month_apr_pct,
@@ -71,7 +71,7 @@ impl From<jaffar_sdk::types::GetStatsResponse> for GetStatsDTO {
 
 impl From<jaffar_sdk::types::AprSummaryResponse> for AprSummaryDTO {
     fn from(summary: jaffar_sdk::types::AprSummaryResponse) -> Self {
-        AprSummaryDTO {
+        Self {
             apr_pct: summary.apr_pct,
             apr_basis: summary.apr_basis.into(),
         }
@@ -84,7 +84,7 @@ impl From<jaffar_sdk::types::AprSummaryResponse> for AprSummaryDTO {
 
 impl From<jaffar_sdk::types::AprSeriesPoint> for AprPoint {
     fn from(p: jaffar_sdk::types::AprSeriesPoint) -> Self {
-        AprPoint {
+        Self {
             t: p.t,
             apr_pct: p.apr_pct,
         }
@@ -102,7 +102,7 @@ impl From<jaffar_sdk::types::AprSeriesResponse> for AprSeriesDTO {
             jaffar_sdk::types::Timeframe::All => Timeframe::All,
         };
 
-        AprSeriesDTO {
+        Self {
             timeframe,
             points: series.points.into_iter().map(Into::into).collect(),
         }
@@ -115,7 +115,7 @@ impl From<jaffar_sdk::types::AprSeriesResponse> for AprSeriesDTO {
 
 impl From<jaffar_sdk::types::NavLatestResponse> for NavLatestDTO {
     fn from(nav: jaffar_sdk::types::NavLatestResponse) -> Self {
-        NavLatestDTO {
+        Self {
             date: nav.date,
             aum: nav.aum,
             var_since_prev_pct: nav.var_since_prev_pct,
@@ -131,13 +131,13 @@ impl From<jaffar_sdk::types::NavLatestResponse> for NavLatestDTO {
 
 impl From<jaffar_sdk::types::TimePoint> for TimeseriesPoint {
     fn from(p: jaffar_sdk::types::TimePoint) -> Self {
-        TimeseriesPoint { t: p.t, v: p.v }
+        Self { t: p.t, v: p.v }
     }
 }
 
 impl From<jaffar_sdk::types::TimeseriesResponse> for TimeseriesResponseDTO {
     fn from(ts: jaffar_sdk::types::TimeseriesResponse) -> Self {
-        TimeseriesResponseDTO {
+        Self {
             metric: ts.metric,
             timeframe: ts.timeframe.to_string(),
             points: ts.points.into_iter().map(Into::into).collect(),
@@ -162,7 +162,7 @@ impl From<jaffar_sdk::types::CompositionPosition> for CompositionPosition {
 }
 impl From<jaffar_sdk::types::CompositionResponse> for CompositionDTO {
     fn from(comp: jaffar_sdk::types::CompositionResponse) -> Self {
-        CompositionDTO {
+        Self {
             as_of: comp.as_of,
             positions: comp.positions.into_iter().map(Into::into).collect(),
         }
@@ -175,7 +175,7 @@ impl From<jaffar_sdk::types::CompositionResponse> for CompositionDTO {
 
 impl From<jaffar_sdk::types::VaultInfoResponse> for VaultInfoDTO {
     fn from(info: jaffar_sdk::types::VaultInfoResponse) -> Self {
-        VaultInfoDTO {
+        Self {
             current_epoch: info.current_epoch,
             underlying_currency: info.underlying_currency,
             underlying_currency_address:

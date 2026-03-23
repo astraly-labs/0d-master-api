@@ -44,10 +44,7 @@ pub async fn get_vault_composition(
         &client,
         &vault,
         "fetch vault composition",
-        move |backend| {
-            let group_by = group_by.clone();
-            async move { backend.get_vault_composition(&group_by).await }
-        },
+        move |backend| async move { backend.get_vault_composition(&group_by).await },
     )
     .await?;
 

@@ -10,7 +10,7 @@ pub trait ZerodPool {
     /// * `f` - The database operation to perform
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// let vaults = pool
     ///     .interact_with_context("fetch all vaults", Vault::find_all)
     ///     .await?;
@@ -64,7 +64,7 @@ impl ZerodPool for Pool {
                     message: e.to_string(),
                 }
             })?
-.map_err(|e| {
+            .map_err(|e| {
                 let db_error: DatabaseError = e.into();
                 if db_error.is_not_found() {
                     tracing::debug!(

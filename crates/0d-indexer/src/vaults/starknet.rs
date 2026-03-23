@@ -45,7 +45,7 @@ impl SupervisedTask for StarknetIndexer {
         let target_proxies = self
             .proxy_address
             .map(|addr| HashSet::from([VaultProxyAddress(addr)]))
-            .unwrap_or(HashSet::new());
+            .unwrap_or_default();
 
         let vault_indexer = StarknetVaultIndexer::new(
             self.apibara_api_key.clone(),
@@ -156,11 +156,8 @@ impl StarknetIndexer {
 
         let vault_contract =
             StarknetVaultContract::new(self.starknet_provider.clone(), self.vault_address);
-        let underlying_asset_decimals = Decimal::from(
-            vault_contract
-                .underlying_asset_decimals(None)
-                .await?,
-        );
+        let underlying_asset_decimals =
+            Decimal::from(vault_contract.underlying_asset_decimals(None).await?);
 
         let deposit_shares = deposit.shares / dec!(10).powd(underlying_asset_decimals);
         let deposit_assets = deposit.assets / dec!(10).powd(underlying_asset_decimals);
@@ -302,11 +299,8 @@ impl StarknetIndexer {
 
         let vault_contract =
             StarknetVaultContract::new(self.starknet_provider.clone(), self.vault_address);
-        let underlying_asset_decimals = Decimal::from(
-            vault_contract
-                .underlying_asset_decimals(None)
-                .await?,
-        );
+        let underlying_asset_decimals =
+            Decimal::from(vault_contract.underlying_asset_decimals(None).await?);
 
         let redeem_shares = redeem.shares / dec!(10).powd(underlying_asset_decimals);
         let redeem_assets = redeem.assets / dec!(10).powd(underlying_asset_decimals);
@@ -498,10 +492,7 @@ impl StarknetIndexer {
                         // Store claim tx hash in metadata, preserving the original RedeemRequested tx hash
                         let mut metadata = tx.metadata.clone().unwrap_or_default();
                         metadata["claim_tx_hash"] = serde_json::Value::String(claim_tx_hash);
-                        tx.update(
-                            &UserTransactionUpdate::new().with_metadata(metadata),
-                            conn,
-                        )
+                        tx.update(&UserTransactionUpdate::new().with_metadata(metadata), conn)
                     }
                 },
             )
@@ -545,7 +536,7 @@ impl StarknetIndexer {
 
                             position.update(&updates, conn).map(|_| ())
                         }
-                        Err(e) if e == diesel::result::Error::NotFound => {
+                        Err(diesel::result::Error::NotFound) => {
                             tracing::warn!(
                                 "[Vault {}] ⚠️ RedeemClaimed: user position not found for cost_basis update: user={}, skipping",
                                 vault_id_for_position,

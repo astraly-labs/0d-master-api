@@ -10,7 +10,7 @@ use crate::{
     dto::ApiResponse,
     dto::{HistoricalDataPoint, HistoricalUserPerformance, PerformanceMetric, Timeframe},
     errors::{ApiError, DatabaseErrorExt},
-    helpers::{quote_to_currency, validate_indexer_status},
+    helpers::{normalize_address, quote_to_currency, validate_indexer_status},
 };
 use zerod_db::{ZerodPool, models::UserKpi};
 use zerod_types::Currency;
@@ -56,6 +56,8 @@ pub async fn get_historical_user_performance(
     Path((address, vault_id)): Path<(String, String)>,
     Query(query): Query<HistoricalQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let address = normalize_address(&address);
+
     // Validate that the indexer is synced before serving user data
     validate_indexer_status(&vault_id, &state.pool).await?;
 

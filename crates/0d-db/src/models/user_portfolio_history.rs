@@ -133,6 +133,39 @@ impl UserPortfolioHistory {
             .get_result(conn)
     }
 
+    /// Get distinct share price time series for a vault (one point per day).
+    /// Share price is vault-level (same for all users), so we pick one row per day.
+    pub fn get_share_price_series(
+        vault_id: &str,
+        since: Option<DateTime<Utc>>,
+        conn: &mut diesel::PgConnection,
+    ) -> QueryResult<Vec<(DateTime<Utc>, Decimal)>> {
+        let mut query = user_portfolio_history::table
+            .filter(user_portfolio_history::vault_id.eq(vault_id))
+            .select((
+                user_portfolio_history::calculated_at,
+                user_portfolio_history::share_price,
+            ))
+            .order(user_portfolio_history::calculated_at.asc())
+            .into_boxed();
+
+        if let Some(since) = since {
+            query = query.filter(user_portfolio_history::calculated_at.ge(since));
+        }
+
+        let rows: Vec<(DateTime<Utc>, Decimal)> = query.load(conn)?;
+
+        // Deduplicate to one entry per day (keep the latest per day)
+        let mut by_day: std::collections::BTreeMap<String, (DateTime<Utc>, Decimal)> =
+            std::collections::BTreeMap::new();
+        for (ts, price) in rows {
+            let day = ts.format("%Y-%m-%d").to_string();
+            by_day.insert(day, (ts, price));
+        }
+
+        Ok(by_day.into_values().collect())
+    }
+
     /// Get the latest portfolio history record for a user/vault
     pub fn find_latest_by_user_and_vault(
         user_address: &str,

@@ -9,7 +9,7 @@ use crate::{
     AppState,
     dto::{ApiResponse, UserKpi},
     errors::{ApiError, DatabaseErrorExt},
-    helpers::validate_indexer_status,
+    helpers::{normalize_address, validate_indexer_status},
 };
 use zerod_db::{
     ZerodPool,
@@ -38,6 +38,8 @@ pub async fn get_user_kpis(
     State(state): State<AppState>,
     Path((address, vault_id)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let address = normalize_address(&address);
+
     // Validate that the indexer is synced before serving user data
     validate_indexer_status(&vault_id, &state.pool).await?;
 

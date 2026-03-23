@@ -8,6 +8,7 @@ use crate::{
     AppState,
     dto::{ApiResponse, UserProfile},
     errors::ApiError,
+    helpers::normalize_address,
 };
 use zerod_db::{ZerodPool, models::User};
 
@@ -28,6 +29,7 @@ pub async fn get_user_profile(
     State(state): State<AppState>,
     Path(address): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let address = normalize_address(&address);
     let address_clone = address.clone();
     let user = state
         .pool

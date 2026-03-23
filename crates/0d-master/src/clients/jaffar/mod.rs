@@ -102,8 +102,7 @@ impl VaultMasterClient for JaffarClient {
             "pnl" => jaffar_sdk::types::Metric::Pnl,
             _ => {
                 return Err(MasterApiError::JaffarSdkError(format!(
-                    "Invalid metric: {}",
-                    metric
+                    "Invalid metric: {metric}"
                 )));
             }
         };

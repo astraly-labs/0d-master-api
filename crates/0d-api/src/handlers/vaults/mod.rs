@@ -5,6 +5,7 @@ pub mod kpis;
 pub mod liquidity;
 pub mod list;
 pub mod misc;
+pub mod share_price;
 pub mod stats;
 pub mod timeseries;
 
@@ -15,5 +16,6 @@ pub use kpis::get_vault_kpis;
 pub use liquidity::{get_vault_liquidity, get_vault_slippage_curve, simulate_vault_liquidity};
 pub use list::list_vaults;
 pub use misc::{get_vault_caps, get_vault_info, get_vault_nav_latest};
+pub use share_price::get_vault_share_price_series;
 pub use stats::get_vault_stats;
 pub use timeseries::get_vault_timeseries;

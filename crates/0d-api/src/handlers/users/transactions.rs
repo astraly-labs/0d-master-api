@@ -8,7 +8,7 @@ use crate::{
     AppState,
     dto::{ApiResponse, UserTransaction, UserTransactionHistory},
     errors::ApiError,
-    helpers::validate_indexer_status,
+    helpers::{normalize_address, validate_indexer_status},
 };
 use serde::Deserialize;
 use zerod_db::{ZerodPool, models::UserTransaction as DbUserTransaction};
@@ -44,6 +44,8 @@ pub async fn get_user_transaction_history(
     Path((address, vault_id)): Path<(String, String)>,
     Query(query): Query<TransactionQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let address = normalize_address(&address);
+
     // Validate that the indexer is synced before serving user data
     validate_indexer_status(&vault_id, &state.pool).await?;
 

@@ -29,6 +29,6 @@ where
     T: std::fmt::Debug,
 {
     fn from(err: jaffar_sdk::Error<T>) -> Self {
-        MasterApiError::JaffarSdkError(format!("{:?}", err))
+        Self::JaffarSdkError(format!("{err:?}"))
     }
 }

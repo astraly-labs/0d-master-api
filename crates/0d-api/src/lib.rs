@@ -48,58 +48,55 @@ impl ApiService {
 }
 
 fn cors_layer_from_env() -> CorsLayer {
-    match env::var("CORS_ALLOWED_ORIGINS") {
-        Ok(origins) => {
-            let allowed_origins: Vec<HeaderValue> = origins
-                .split(',')
-                .filter_map(|origin| {
-                    let trimmed = origin.trim();
-                    if trimmed.is_empty() {
-                        return None;
+    if let Ok(origins) = env::var("CORS_ALLOWED_ORIGINS") {
+        let allowed_origins: Vec<HeaderValue> = origins
+            .split(',')
+            .filter_map(|origin| {
+                let trimmed = origin.trim();
+                if trimmed.is_empty() {
+                    return None;
+                }
+                match HeaderValue::from_str(trimmed) {
+                    Ok(value) => Some(value),
+                    Err(err) => {
+                        tracing::warn!(
+                            origin = trimmed,
+                            error = %err,
+                            "Invalid origin in CORS_ALLOWED_ORIGINS, skipping",
+                        );
+                        None
                     }
-                    match HeaderValue::from_str(trimmed) {
-                        Ok(value) => Some(value),
-                        Err(err) => {
-                            tracing::warn!(
-                                origin = trimmed,
-                                error = %err,
-                                "Invalid origin in CORS_ALLOWED_ORIGINS, skipping",
-                            );
-                            None
-                        }
-                    }
-                })
-                .collect();
+                }
+            })
+            .collect();
 
-            if allowed_origins.is_empty() {
-                tracing::warn!(
-                    "CORS_ALLOWED_ORIGINS was set but no valid origins were parsed; falling back to permissive CORS",
-                );
-                return CorsLayer::permissive();
-            }
-
-            tracing::info!(
-                allowed = %origins,
-                "Configured restricted CORS origins from environment",
+        if allowed_origins.is_empty() {
+            tracing::warn!(
+                "CORS_ALLOWED_ORIGINS was set but no valid origins were parsed; falling back to permissive CORS",
             );
+            return CorsLayer::permissive();
+        }
 
-            CorsLayer::new()
-                .allow_credentials(true)
-                .allow_headers(AllowHeaders::mirror_request())
-                .allow_methods(AllowMethods::list([
-                    Method::GET,
-                    Method::POST,
-                    Method::PUT,
-                    Method::PATCH,
-                    Method::DELETE,
-                    Method::OPTIONS,
-                ]))
-                .allow_origin(AllowOrigin::list(allowed_origins))
-        }
-        Err(_) => {
-            tracing::info!("CORS_ALLOWED_ORIGINS not set; using permissive CORS configuration",);
-            CorsLayer::permissive()
-        }
+        tracing::info!(
+            allowed = %origins,
+            "Configured restricted CORS origins from environment",
+        );
+
+        CorsLayer::new()
+            .allow_credentials(true)
+            .allow_headers(AllowHeaders::mirror_request())
+            .allow_methods(AllowMethods::list([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::PATCH,
+                Method::DELETE,
+                Method::OPTIONS,
+            ]))
+            .allow_origin(AllowOrigin::list(allowed_origins))
+    } else {
+        tracing::info!("CORS_ALLOWED_ORIGINS not set; using permissive CORS configuration",);
+        CorsLayer::permissive()
     }
 }
 

@@ -38,10 +38,12 @@ pub async fn get_vault_kpis(
 
     let (vault, client) = fetch_vault_with_client(&state, &vault_id).await?;
     let timeframe = params.timeframe.as_str().to_owned();
-    let kpis = call_vault_backend(&client, &vault, "fetch vault KPIs", move |backend| {
-        let timeframe = timeframe.clone();
-        async move { backend.get_vault_kpis(&timeframe).await }
-    })
+    let kpis = call_vault_backend(
+        &client,
+        &vault,
+        "fetch vault KPIs",
+        move |backend| async move { backend.get_vault_kpis(&timeframe).await },
+    )
     .await?;
 
     Ok(Json(ApiResponse::ok(kpis)))

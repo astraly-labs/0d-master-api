@@ -49,6 +49,10 @@ fn create_vaults_router() -> Router<AppState> {
             get(handlers::get_vault_nav_latest),
         )
         .route("/{vault_id}/info", get(handlers::get_vault_info))
+        .route(
+            "/{vault_id}/share-price/series",
+            get(handlers::get_vault_share_price_series),
+        )
 }
 
 fn create_users_router() -> Router<AppState> {

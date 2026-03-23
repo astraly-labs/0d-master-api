@@ -40,17 +40,17 @@ where
 /// Extracts the domain from Origin or Referer header
 fn extract_domain_from_headers(headers: &HeaderMap) -> Option<String> {
     // Try Origin header first
-    if let Some(origin) = headers.get("origin") {
-        if let Ok(origin_str) = origin.to_str() {
-            return extract_domain(origin_str);
-        }
+    if let Some(origin) = headers.get("origin")
+        && let Ok(origin_str) = origin.to_str()
+    {
+        return extract_domain(origin_str);
     }
 
     // Fallback to Referer header
-    if let Some(referer) = headers.get("referer") {
-        if let Ok(referer_str) = referer.to_str() {
-            return extract_domain(referer_str);
-        }
+    if let Some(referer) = headers.get("referer")
+        && let Ok(referer_str) = referer.to_str()
+    {
+        return extract_domain(referer_str);
     }
 
     None
@@ -58,8 +58,8 @@ fn extract_domain_from_headers(headers: &HeaderMap) -> Option<String> {
 
 /// Extracts domain from a URL string
 /// Examples:
-/// - "https://example.com/path" -> "example.com"
-/// - "http://api.example.com:8080/path" -> "api.example.com"
+/// - `https://example.com/path` -> `example.com`
+/// - `http://api.example.com:8080/path` -> `api.example.com`
 fn extract_domain(url: &str) -> Option<String> {
     // Remove protocol if present
     let without_protocol = url
@@ -83,7 +83,7 @@ fn extract_domain(url: &str) -> Option<String> {
 /// Middleware that checks if a request is from a whitelisted domain,
 /// and if not, applies rate limiting.
 ///
-/// This middleware is designed to work with IP-based rate limiting using SmartIpKeyExtractor.
+/// This middleware is designed to work with IP-based rate limiting using `SmartIpKeyExtractor`.
 pub async fn rate_limit_middleware<M>(
     config: RateLimitConfig<std::net::IpAddr, M>,
     request: Request,
@@ -93,14 +93,14 @@ where
     M: RateLimitingMiddleware<QuantaInstant>,
 {
     // Check if request is from a whitelisted domain
-    if let Some(domain) = extract_domain_from_headers(request.headers()) {
-        if config.whitelist_domains.contains(&domain) {
-            tracing::debug!(
-                domain = %domain,
-                "Request from whitelisted domain, bypassing rate limit"
-            );
-            return Ok(next.run(request).await);
-        }
+    if let Some(domain) = extract_domain_from_headers(request.headers())
+        && config.whitelist_domains.contains(&domain)
+    {
+        tracing::debug!(
+            domain = %domain,
+            "Request from whitelisted domain, bypassing rate limit"
+        );
+        return Ok(next.run(request).await);
     }
 
     // Not whitelisted, apply rate limiting using the governor
@@ -113,21 +113,18 @@ where
         }
     };
 
-    match config.limiter.check_key(&key) {
-        Ok(_) => {
-            // Rate limit check passed
-            Ok(next.run(request).await)
-        }
-        Err(_) => {
-            // Rate limit exceeded
-            tracing::warn!(
-                key = ?key,
-                "Rate limit exceeded"
-            );
+    if config.limiter.check_key(&key).is_ok() {
+        // Rate limit check passed
+        Ok(next.run(request).await)
+    } else {
+        // Rate limit exceeded
+        tracing::warn!(
+            key = ?key,
+            "Rate limit exceeded"
+        );
 
-            // Return 429 Too Many Requests
-            Err(StatusCode::TOO_MANY_REQUESTS)
-        }
+        // Return 429 Too Many Requests
+        Err(StatusCode::TOO_MANY_REQUESTS)
     }
 }
 
